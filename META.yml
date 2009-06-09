@@ -1,6 +1,6 @@
 ---
 name: File-Map
-version: 0.14
+version: 0.15
 author:
   - 'Leon Timmermans <leont@cpan.org>'
 abstract: Memory mapping made simple and safe.
@@ -8,9 +8,9 @@ license: perl
 resources:
   bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Map
   license: http://dev.perl.org/licenses/
-configure_requires:
-  Module::Build: 0
+  repository: http://github.com/Leont/file-map/tree
 requires:
+  Readonly: 1.03
   perl: 5.007003
 build_requires:
   ExtUtils::CBuilder: 0
@@ -21,10 +21,12 @@ build_requires:
   Test::Warn: 0
   Time::HiRes: 0
   threads: 0
+recommends:
+  Readonly::XS: 0
 provides:
   File::Map:
     file: lib/File/Map.pm
-    version: 0.14
+    version: 0.15
 generated_by: Module::Build version 0.3
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
