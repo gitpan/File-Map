@@ -22,11 +22,12 @@ my $builder = Module::Build->new(
 		threads        => 0,
 	},
 	requires => {
-		perl           => 5.007003,
+		perl           => 5.008,
 		Readonly       => 1.03,
+		Exporter       => 5.57,
 	},
 	recommends => {
-		'Readonly::XS' => 0,
+		'Readonly::XS' => 1.05,
 	},
 	meta_merge => {
 		resources      => {

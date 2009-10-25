@@ -4,8 +4,8 @@ use strict;
 use warnings;
 use bytes;
 
-use File::Map qw/:map lock_map sync/;
-use Test::More tests => 17;
+use File::Map qw/:map lock_map sync advise/;
+use Test::More tests => 20;
 use Test::Warn;
 use Test::Exception;
 
@@ -51,6 +51,12 @@ SKIP: {
 	throws_ok { map_handle my $foo, STDOUT } qr/^Could not mmap: /, 'Can\'t map STDOUT';
 }
 
+warning_is { advise $mmaped, 'sequential' } undef, 'advice $mmaped, \'readahead\'';
+
 warning_like { $mmaped = "foo" } qr/^Writing directly to a to a memory mapped file is not recommended at /, 'Trying to make it shorter gives a warning';
 
 is(length $mmaped, length $slurped, '$mmaped and $slurped still have the same length');
+
+warnings_like { $mmaped = "foobar" } [ qr/^Writing directly to a to a memory mapped file is not recommended at /], 'Cutting should give a warning';
+
+warnings_like { $mmaped = 1 } [ qr/^Writing directly to a to a memory mapped file is not recommended at /], 'Cutting should give a warning for numbers too';

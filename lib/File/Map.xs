@@ -38,6 +38,10 @@
 #	define MAP_FILE 0
 #endif
 
+#ifndef MAP_VARIABLE
+#	define MAP_VARIABLE 0
+#endif
+
 #ifndef MIN
 #	define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
@@ -61,6 +65,7 @@ struct mmap_info {
 #ifdef USE_ITHREADS
 	perl_mutex count_mutex;
 	perl_mutex data_mutex;
+	PerlInterpreter* owner;
 	perl_cond cond;
 	int count;
 #endif
@@ -110,6 +115,14 @@ static const struct {
 	{ PAGE_EXECUTE_READWRITE, FILE_MAP_WRITE      | FILE_MAP_EXECUTE}, /* PROT_WRITE | PROT_EXEC */
 	{ PAGE_EXECUTE_READWRITE, FILE_MAP_ALL_ACCESS | FILE_MAP_EXECUTE}, /* PROT_READ| PROT_WRITE | PROT_EXEC */
 };
+
+#define madvise(address, length, advice) 0
+
+#define MADV_NORMAL 0
+#define MADV_RANDOM 0
+#define MADV_SEQUENTIAL 0
+#define MADV_WILLNEED 0
+#define MADV_DONTNEED 0
 #else
 
 static void get_sys_error(char* buffer, size_t buffer_size) {
@@ -159,7 +172,7 @@ static void reset_var(SV* var, struct mmap_info* info) {
 
 static int mmap_write(pTHX_ SV* var, MAGIC* magic) {
 	struct mmap_info* info = (struct mmap_info*) magic->mg_ptr;
-	if (SvPVX(var) != info->fake_address) {
+	if (!SvPOK(var) || SvPVX(var) != info->fake_address) {
 		if (ckWARN(WARN_SUBSTR)) {
 			Perl_warn(aTHX_ "Writing directly to a to a memory mapped file is not recommended");
 			if (SvLEN(var) > info->fake_length)
@@ -171,11 +184,6 @@ static int mmap_write(pTHX_ SV* var, MAGIC* magic) {
 		reset_var(var, info);
 	}
 	return 0;
-}
-
-static U32 mmap_length(pTHX_ SV* var, MAGIC* magic) {
-	struct mmap_info* info = (struct mmap_info*) magic->mg_ptr;
-	return info->fake_length;
 }
 
 static int mmap_free(pTHX_ SV* var, MAGIC* magic) {
@@ -219,8 +227,7 @@ static int mmap_dup(pTHX_ MAGIC* magic, CLONE_PARAMS* param) {
 #define mmap_dup 0
 #endif
 
-static const MGVTBL mmap_read_table  = { NULL, NULL,       mmap_length, mmap_free, mmap_free, 0, mmap_dup };
-static const MGVTBL mmap_write_table = { NULL, mmap_write, mmap_length, mmap_free, mmap_free, 0, mmap_dup };
+static const MGVTBL mmap_table = { NULL, mmap_write, 0, mmap_free, mmap_free, 0, mmap_dup };
 
 static void check_new_variable(pTHX_ SV* var) {
 	if (SvTYPE(var) > SVt_PVMG && SvTYPE(var) != SVt_PVLV)
@@ -245,7 +252,7 @@ static void* do_mapping(pTHX_ size_t length, int prot, int flags, int fd, off_t 
 	CloseHandle(mapping);
 	if (address == NULL)
 #else
-	address = mmap(0, length, prot, flags, fd, offset);
+	address = mmap(0, length, prot, flags | MAP_VARIABLE, fd, offset);
 	if (address == MAP_FAILED)
 #endif
 		croak_sys(aTHX_ "Could not mmap: %s");
@@ -269,8 +276,7 @@ static struct mmap_info* initialize_mmap_info(void* address, size_t length, ptrd
 }
 
 static void add_magic(pTHX_ SV* var, struct mmap_info* magical, int writable) {
-	const MGVTBL* table = writable ? &mmap_write_table : &mmap_read_table;
-	MAGIC* magic = sv_magicext(var, NULL, PERL_MAGIC_uvar, table, (const char*) magical, 0);
+	MAGIC* magic = sv_magicext(var, NULL, PERL_MAGIC_uvar, &mmap_table, (const char*) magical, 0);
 	magic->mg_private = MMAP_MAGIC_NUMBER;
 #ifdef USE_ITHREADS
 	magic->mg_flags |= MGf_DUP;
@@ -292,13 +298,20 @@ static struct mmap_info* get_mmap_magic(pTHX_ SV* var, const char* funcname) {
 	return (struct mmap_info*) magic->mg_ptr;
 }
 
-static void magic_end(pTHX_ void* info) {
-	MUTEX_UNLOCK(&((struct mmap_info*)info)->data_mutex);
+static void magic_end(pTHX_ void* pre_info) {
+	struct mmap_info* info = (struct mmap_info*) pre_info;
+	info->owner = NULL;
+	MUTEX_UNLOCK(&info->data_mutex);
 }
 
 #define YES &PL_sv_yes
 
-#define MAP_CONSTANT(cons) hv_store(map_constants, #cons, sizeof #cons - 1, newSVuv(cons), 0)
+/*#define MAP_CONSTANT(cons) hv_store(map_constants, #cons, sizeof #cons - 1, newSVuv(cons), 0)*/
+#define MAP_CONSTANT(cons) STMT_START {\
+	newCONSTSUB(stash, #cons, newSVuv(cons));\
+	av_push(constants, newSVuv(cons));\
+	av_push(export_ok, newSVuv(cons));\
+} STMT_END
 #define ADVISE_CONSTANT(key, value) hv_store(advise_constants, key, sizeof key - 1, newSVuv(value), 0)
 
 MODULE = File::Map				PACKAGE = File::Map
@@ -306,7 +319,10 @@ MODULE = File::Map				PACKAGE = File::Map
 PROTOTYPES: DISABLED
 
 BOOT:
-	HV* map_constants = get_hv("File::Map::MAP_CONSTANTS", TRUE);
+	AV* constants = newAV();
+	hv_store(get_hv("File::Map::EXPORT_TAGS", TRUE), "constants", 9, newRV((SV*) constants), 0);
+	AV* export_ok = get_av("File::Map::EXPORT_OK", TRUE);
+	HV* stash = get_hv("File::Map::", FALSE);
 	MAP_CONSTANT(PROT_NONE);
 	MAP_CONSTANT(PROT_READ);
 	MAP_CONSTANT(PROT_WRITE);
@@ -317,13 +333,15 @@ BOOT:
 	MAP_CONSTANT(MAP_ANON);
 	MAP_CONSTANT(MAP_FILE);
 	/**/
-#ifdef MADV_NORMAL
-	HV* advise_constants = get_hv("File::Map::ADVISE_CONSTANTS", TRUE | GV_ADDMULTI );
+	
+	HV* advise_constants = newHV();
+	hv_store(PL_modglobal, "File::Map::ADVISE_CONSTANTS", 27, (SV*)advise_constants, 0);
 	ADVISE_CONSTANT("normal", MADV_NORMAL);
 	ADVISE_CONSTANT("random", MADV_RANDOM);
 	ADVISE_CONSTANT("sequential", MADV_SEQUENTIAL);
 	ADVISE_CONSTANT("willneed", MADV_WILLNEED);
 	ADVISE_CONSTANT("dontneed", MADV_DONTNEED);
+	/* Linux specific advices */
 #ifdef MADV_REMOVE
 	ADVISE_CONSTANT("remove", MADV_REMOVE);
 #endif
@@ -333,6 +351,28 @@ BOOT:
 #ifdef MADV_DOFORK
 	ADVISE_CONSTANT("dofork", MADV_DOFORK);
 #endif
+	/* BSD, Mac OS X & Solaris specific advice */
+#ifdef MADV_FREE
+	ADVISE_CONSTANT("free", MADV_FREE);
+#endif
+	/* FreeBSD specific advices */
+#ifdef MADV_NOSYNC
+	ADVISE_CONSTANT("nosync", MADV_NOSYNC);
+#endif
+#ifdef MADV_AUTOSYNC
+	ADVISE_CONSTANT("autosync", MADV_AUTOSYNC);
+#endif
+#ifdef MADV_NOCORE
+	ADVISE_CONSTANT("nocore", MADV_NOCORE);
+#endif
+#ifdef MADV_CORE
+	ADVISE_CONSTANT("core", MADV_CORE);
+#endif
+#ifdef MADV_PROTECT
+	ADVISE_CONSTANT("protect", MADV_PROTECT);
+#endif
+#ifdef MADV_SPACEAVAIL
+	ADVISE_CONSTANT("spaceavail", MADV_SPACEAVAIL);
 #endif
 
 void
@@ -409,14 +449,14 @@ advise(var, name)
 	PROTOTYPE: \$@
 	CODE:
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "advise");
-#ifdef MADV_NORMAL
-		HV* constants = get_hv("File::Map::ADVISE_CONSTANTS", FALSE);
+		HV* constants = (HV*) *hv_fetch(PL_modglobal, "File::Map::ADVISE_CONSTANTS", 27, 0);
 		HE* value = hv_fetch_ent(constants, name, 0, 0);
-		if (!value)
-			Perl_croak(aTHX_ "Invalid key for advise");
-		if (madvise(info->real_address, info->real_length, SvUV(HeVAL(value)) == -1))
+		if (!value) {
+			if (ckWARN(WARN_PORTABLE))
+				Perl_warn(aTHX_ "Invalid key '%s' for advise", SvPV_nolen(name));
+		}
+		else if (madvise(info->real_address, info->real_length, SvUV(HeVAL(value)) == -1))
 			die_sys(aTHX_ "Could not madvice: %s");
-#endif
 
 void
 lock_map(var)
@@ -428,6 +468,7 @@ lock_map(var)
 		LEAVE;
 		SAVEDESTRUCTOR_X(magic_end, info);
 		MUTEX_LOCK(&info->data_mutex);
+		info->owner = aTHX;
 		ENTER;
 #endif
 
@@ -439,6 +480,8 @@ wait_until(block, var)
 	PROTOTYPE: &\$
 	PPCODE:
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "wait_until");
+		if (info->owner != aTHX)
+			Perl_croak(aTHX_ "Trying to wait on an unlocked map");
 		SAVESPTR(DEFSV);
 		DEFSV = var;
 		while (1) {
@@ -457,6 +500,8 @@ notify(var)
 	PROTOTYPE: \$
 	CODE:
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "notify");
+		if (info->owner != aTHX)
+			Perl_croak(aTHX_ "Trying to notify on an unlocked map");
 		COND_SIGNAL(&info->cond);
 
 void
@@ -465,6 +510,8 @@ broadcast(var)
 	PROTOTYPE: \$
 	CODE:
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "broadcast");
+		if (info->owner != aTHX)
+			Perl_croak(aTHX_ "Trying to broadcast on an unlocked map");
 		COND_BROADCAST(&info->cond);
 
 #endif /* USE ITHREADS */

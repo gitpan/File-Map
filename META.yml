@@ -1,6 +1,6 @@
 ---
 name: File-Map
-version: 0.16
+version: 0.17
 author:
   - 'Leon Timmermans <leont@cpan.org>'
 abstract: Memory mapping made simple and safe.
@@ -12,8 +12,9 @@ resources:
 configure_requires:
   Module::Build: 0
 requires:
+  Exporter: 5.57
   Readonly: 1.03
-  perl: 5.007003
+  perl: 5.008
 build_requires:
   ExtUtils::CBuilder: 0
   IO::Handle: 0
@@ -24,11 +25,11 @@ build_requires:
   Time::HiRes: 0
   threads: 0
 recommends:
-  Readonly::XS: 0
+  Readonly::XS: 1.05
 provides:
   File::Map:
     file: lib/File/Map.pm
-    version: 0.16
+    version: 0.17
 generated_by: Module::Build version 0.3
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
