@@ -1,6 +1,6 @@
 ---
 name: File-Map
-version: 0.18
+version: 0.19
 author:
   - 'Leon Timmermans <leont@cpan.org>'
 abstract: Memory mapping made simple and safe.
@@ -29,7 +29,7 @@ recommends:
 provides:
   File::Map:
     file: lib/File/Map.pm
-    version: 0.18
+    version: 0.19
 generated_by: Module::Build version 0.3
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
