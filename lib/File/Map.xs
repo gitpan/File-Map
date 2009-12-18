@@ -99,7 +99,7 @@ static DWORD page_size() {
 #define munlock(address, length) ( VirtualUnlock(address, length) ? 0 : -1 )
 
 #ifndef FILE_MAP_EXECUTE
-#define FILE_MAP_EXECUTE 0
+#	define FILE_MAP_EXECUTE 0
 #endif
 
 static const struct {
@@ -118,11 +118,6 @@ static const struct {
 
 #define madvise(address, length, advice) 0
 
-#define MADV_NORMAL 0
-#define MADV_RANDOM 0
-#define MADV_SEQUENTIAL 0
-#define MADV_WILLNEED 0
-#define MADV_DONTNEED 0
 #else
 
 static void get_sys_error(char* buffer, size_t buffer_size) {
@@ -144,28 +139,44 @@ static size_t page_size() {
 }
 #endif
 
+#ifndef MADV_NORMAL
+#	define MADV_NORMAL 0
+#	define MADV_RANDOM 0
+#	define MADV_SEQUENTIAL 0
+#	define MADV_WILLNEED 0
+#	define MADV_DONTNEED 0
+#endif
+
 static void die_sys(pTHX_ const char* format) {
 	char buffer[128];
 	get_sys_error(buffer, sizeof buffer);
 	Perl_croak(aTHX_ format, buffer);
 }
 
-static void croak_sys(pTHX_ const char* format) {
-	char buffer[128];
+static void real_croak_sv(pTHX_ SV* value) {
 	dSP;
-	get_sys_error(buffer, sizeof buffer);
-	SV* const tmp = sv_2mortal(newSVpvf(format, buffer, NULL));
 	PUSHMARK(SP);
-	XPUSHs(tmp);
+	XPUSHs(value);
 	PUTBACK;
 	call_pv("Carp::croak", G_VOID | G_DISCARD);
 }
 
+static void real_croak_pv(pTHX_ const char* value) {
+	real_croak_sv(aTHX_ sv_2mortal(newSVpv(value, 0)));
+}
+
+static void croak_sys(pTHX_ const char* format) {
+	char buffer[128];
+	get_sys_error(buffer, sizeof buffer);
+	SV* const tmp = sv_2mortal(newSVpvf(format, buffer, NULL));
+	real_croak_sv(aTHX_ tmp);
+}
+
 #define PROT_ALL (PROT_READ | PROT_WRITE | PROT_EXEC)
 
-static void reset_var(SV* var, struct mmap_info* info) {
+static void reset_var(SV* var, struct mmap_info* info, size_t length) {
 	SvPVX(var) = info->fake_address;
-	SvLEN(var) = 0;
+	SvLEN(var) = length;
 	SvCUR(var) = info->fake_length;
 	SvPOK_only(var);
 }
@@ -182,7 +193,7 @@ static void mmap_fixup(pTHX_ SV* var, struct mmap_info* info, const char* string
 		sv_unref_flags(var, SV_IMMEDIATE_UNREF);
 	if (SvPOK(var))
 		SvPV_free(var);
-	reset_var(var, info);
+	reset_var(var, info, 0);
 }
 
 static int mmap_write(pTHX_ SV* var, MAGIC* magic) {
@@ -197,13 +208,18 @@ static int mmap_write(pTHX_ SV* var, MAGIC* magic) {
 	return 0;
 }
 
+static int mmap_clear(pTHX_ SV* var, MAGIC* magic) {
+	Perl_die(aTHX_ "Can't clear a mapped variable");
+	return 0;
+}
+
 static int mmap_free(pTHX_ SV* var, MAGIC* magic) {
 	struct mmap_info* info = (struct mmap_info*) magic->mg_ptr;
 #ifdef USE_ITHREADS
 	MUTEX_LOCK(&info->count_mutex);
 	if (--info->count == 0) {
 		if (munmap(info->real_address, info->real_length) == -1)
-			die_sys(aTHX_ "Could not munmap: %s");
+			die_sys(aTHX_ "Could not unmap: %s");
 		COND_DESTROY(&info->cond);
 		MUTEX_DESTROY(&info->data_mutex);
 		MUTEX_UNLOCK(&info->count_mutex);
@@ -212,14 +228,37 @@ static int mmap_free(pTHX_ SV* var, MAGIC* magic) {
 	}
 	else {
 		if (msync(info->real_address, info->real_length, MS_ASYNC) == -1)
-			die_sys(aTHX_ "Could not msync: %s");
+			die_sys(aTHX_ "Could not sync: %s");
 		MUTEX_UNLOCK(&info->count_mutex);
 	}
 #else
 	if (munmap(info->real_address, info->real_length) == -1)
-		die_sys(aTHX_ "Could not munmap: %s");
+		die_sys(aTHX_ "Could not unmap: %s");
 	Safefree(info);
 #endif 
+	SvPVX(var) = NULL;
+	SvCUR(var) = 0;
+	return 0;
+}
+
+static int empty_free(pTHX_ SV* var, MAGIC* magic) {
+	struct mmap_info* info = (struct mmap_info*) magic->mg_ptr;
+#ifdef USE_ITHREADS
+	MUTEX_LOCK(&info->count_mutex);
+	if (--info->count == 0) {
+		COND_DESTROY(&info->cond);
+		MUTEX_DESTROY(&info->data_mutex);
+		MUTEX_UNLOCK(&info->count_mutex);
+		MUTEX_DESTROY(&info->count_mutex);
+		Safefree(info);
+	}
+	else {
+		MUTEX_UNLOCK(&info->count_mutex);
+	}
+#else
+	Safefree(info);
+#endif 
+	SvPV_free(var);
 	SvPVX(var) = NULL;
 	SvCUR(var) = 0;
 	return 0;
@@ -238,7 +277,8 @@ static int mmap_dup(pTHX_ MAGIC* magic, CLONE_PARAMS* param) {
 #define mmap_dup 0
 #endif
 
-static const MGVTBL mmap_table = { NULL, mmap_write, 0, mmap_free, mmap_free, 0, mmap_dup };
+static const MGVTBL mmap_table  = { 0, mmap_write, 0, mmap_clear, mmap_free,  0, mmap_dup };
+static const MGVTBL empty_table = { 0, 0,          0, mmap_clear, empty_free, 0, mmap_dup };
 
 static void check_new_variable(pTHX_ SV* var) {
 	if (SvTYPE(var) > SVt_PVMG && SvTYPE(var) != SVt_PVLV)
@@ -257,7 +297,7 @@ static void* do_mapping(pTHX_ size_t length, int prot, int flags, int fd, off_t 
 	HANDLE file = (flags & MAP_ANONYMOUS) ? INVALID_HANDLE_VALUE : (HANDLE)_get_osfhandle(fd);
 	HANDLE mapping = CreateFileMapping(file, NULL, winflags[prot].createflag, 0, length, NULL);
 	if (mapping == NULL)
-		croak_sys(aTHX_ "Could not mmap: %s");
+		croak_sys(aTHX_ "Could not map: %s");
 	DWORD viewflag = (flags & MAP_PRIVATE) ? (FILE_MAP_COPY | ( prot | PROT_EXEC ? FILE_MAP_EXECUTE : 0 ) ) : winflags[prot].viewflag;
 	address = MapViewOfFile(mapping, viewflag, 0, offset, length);
 	CloseHandle(mapping);
@@ -266,7 +306,7 @@ static void* do_mapping(pTHX_ size_t length, int prot, int flags, int fd, off_t 
 	address = mmap(0, length, prot, flags | MAP_VARIABLE, fd, offset);
 	if (address == MAP_FAILED)
 #endif
-		croak_sys(aTHX_ "Could not mmap: %s");
+		croak_sys(aTHX_ "Could not map: %s");
 	return address;
 }
 
@@ -286,8 +326,8 @@ static struct mmap_info* initialize_mmap_info(void* address, size_t length, ptrd
 	return magical;
 }
 
-static void add_magic(pTHX_ SV* var, struct mmap_info* magical, int writable) {
-	MAGIC* magic = sv_magicext(var, NULL, PERL_MAGIC_uvar, &mmap_table, (const char*) magical, 0);
+static void add_magic(pTHX_ SV* var, struct mmap_info* magical, const MGVTBL* table, int writable) {
+	MAGIC* magic = sv_magicext(var, NULL, PERL_MAGIC_uvar, table, (const char*) magical, 0);
 	magic->mg_private = MMAP_MAGIC_NUMBER;
 #ifdef USE_ITHREADS
 	magic->mg_flags |= MGf_DUP;
@@ -296,9 +336,14 @@ static void add_magic(pTHX_ SV* var, struct mmap_info* magical, int writable) {
 		SvREADONLY_on(var);
 }
 
+static int is_stattable(int fd) {
+	struct stat info;
+	return Fstat(fd, &info) == 0 && (S_ISREG(info.st_mode) || S_ISBLK(info.st_mode));
+}
+
 static SV* deref_var(pTHX_ SV* var_ref) {
 	if (!SvROK(var_ref))
-		Perl_croak(aTHX_ "Invalid argument!");
+		Perl_croak(aTHX_ "Invalid argument");
 	return SvRV(var_ref);
 }
 
@@ -325,6 +370,13 @@ static void magic_end(pTHX_ void* pre_info) {
 	av_push(export_ok, newSVuv(cons));\
 } STMT_END
 #define ADVISE_CONSTANT(key, value) hv_store(advise_constants, key, sizeof key - 1, newSVuv(value), 0)
+
+#define EMPTY_MAP(info) ((info)->real_length == 0)
+
+#define IGNORE_EMPTY_MAP(info) STMT_START {\
+	if (EMPTY_MAP(info))\
+		XSRETURN_EMPTY;\
+	} STMT_END
 
 MODULE = File::Map				PACKAGE = File::Map
 
@@ -398,12 +450,25 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 	CODE:
 		check_new_variable(aTHX_ var);
 		
-		ptrdiff_t correction = offset % page_size();
-		void* address = do_mapping(aTHX_ length + correction, prot, flags, fd, offset - correction);
-		
-		struct mmap_info* magical = initialize_mmap_info(address, length, correction);
-		reset_var(var, magical);
-		add_magic(aTHX_ var, magical, prot & PROT_WRITE);
+		if (length) {
+			ptrdiff_t correction = offset % page_size();
+			void* address = do_mapping(aTHX_ length + correction, prot, flags, fd, offset - correction);
+			
+			struct mmap_info* magical = initialize_mmap_info(address, length, correction);
+			reset_var(var, magical, 0);
+			add_magic(aTHX_ var, magical, &mmap_table, prot & PROT_WRITE);
+		}
+		else {
+			if (prot & PROT_WRITE)
+				real_croak_pv(aTHX_ "Can't map empty file writably");
+			if (!is_stattable(fd))
+				real_croak_pv(aTHX_ "Could not map: handle doesn't refer to a file");
+			sv_setpvn(var, "", 0);
+
+			struct mmap_info* magical = initialize_mmap_info(SvPV_nolen(var), 0, 0);
+			reset_var(var, magical, SvCUR(var));
+			add_magic(aTHX_ var, magical, &empty_table, prot & PROT_WRITE);
+		}
 
 void
 sync(var, sync = YES)
@@ -412,6 +477,9 @@ sync(var, sync = YES)
 	PROTOTYPE: \$@
 	CODE:
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "sync");
+		IGNORE_EMPTY_MAP(info);
+		if (SvREADONLY(var) && ckWARN(WARN_IO))
+			Perl_warn(aTHX_ "Syncing a readonly map makes no sense");
 		if (msync(info->real_address, info->real_length, SvTRUE(sync) ? MS_SYNC : MS_ASYNC ) == -1)
 			die_sys(aTHX_ "Could not sync: %s");
 
@@ -423,6 +491,10 @@ remap(var, new_size)
 	PROTOTYPE: \$@
 	CODE:
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "remap");
+		if (EMPTY_MAP(info))
+			Perl_croak(aTHX_ "Can't remap empty map"); /* XXX */
+		if (new_size == 0)
+			Perl_croak(aTHX_ "Can't remap to zero");
 		if (mremap(info->real_address, info->real_length, new_size + (info->real_length - info->fake_length), 0) == MAP_FAILED)
 			die_sys(aTHX_ "Could not remap: %s");
 
@@ -442,8 +514,9 @@ pin(var)
 	PROTOTYPE: \$
 	CODE: 
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "pin");
+		IGNORE_EMPTY_MAP(info);
 		if (mlock(info->real_address, info->real_length) == -1)
-			die_sys(aTHX_ "Could not mlock: %s");
+			die_sys(aTHX_ "Could not pin: %s");
 
 void
 unpin(var)
@@ -451,8 +524,9 @@ unpin(var)
 	PROTOTYPE: \$
 	CODE:
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "unpin");
+		IGNORE_EMPTY_MAP(info);
 		if (munlock(info->real_address, info->real_length) == -1)
-			die_sys(aTHX_ "Could not munlock: %s");
+			die_sys(aTHX_ "Could not unpin: %s");
 
 void
 advise(var, name)
@@ -461,14 +535,15 @@ advise(var, name)
 	PROTOTYPE: \$@
 	CODE:
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "advise");
+		IGNORE_EMPTY_MAP(info);
 		HV* constants = (HV*) *hv_fetch(PL_modglobal, "File::Map::ADVISE_CONSTANTS", 27, 0);
 		HE* value = hv_fetch_ent(constants, name, 0, 0);
 		if (!value) {
 			if (ckWARN(WARN_PORTABLE))
-				Perl_warn(aTHX_ "Invalid key '%s' for advise", SvPV_nolen(name));
+				Perl_warn(aTHX_ "Unknown advice '%s'", SvPV_nolen(name));
 		}
-		else if (madvise(info->real_address, info->real_length, SvUV(HeVAL(value)) == -1))
-			die_sys(aTHX_ "Could not madvice: %s");
+		else if (madvise(info->real_address, info->real_length, SvUV(HeVAL(value))) == -1)
+			die_sys(aTHX_ "Could not advice: %s");
 
 void
 lock_map(var)
