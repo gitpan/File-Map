@@ -97,6 +97,7 @@ static DWORD page_size() {
 #define msync(address, length, flags) ( FlushViewOfFile(address, length) ? 0 : -1 ) 
 #define mlock(address, length) ( VirtualLock(address, length) ? 0 : -1 )
 #define munlock(address, length) ( VirtualUnlock(address, length) ? 0 : -1 )
+#define mprotect(address, length, prot) ( VirtualProtect(address, length, winflags[prot & PROT_ALL].createflag) ? 0 : -1 )
 
 #ifndef FILE_MAP_EXECUTE
 #	define FILE_MAP_EXECUTE 0
@@ -208,6 +209,16 @@ static int mmap_write(pTHX_ SV* var, MAGIC* magic) {
 	return 0;
 }
 
+static int empty_write(pTHX_ SV* var, MAGIC* magic) {
+	struct mmap_info* info = (struct mmap_info*) magic->mg_ptr;
+	if (!SvPOK(var) || sv_len(var) != 0) {
+		sv_setpvn(var, "", 0);
+		if (ckWARN(WARN_SUBSTR))
+			Perl_warn(aTHX_ "Can't overwrite an empty map");
+	}
+	return 0;
+}
+
 static int mmap_clear(pTHX_ SV* var, MAGIC* magic) {
 	Perl_die(aTHX_ "Can't clear a mapped variable");
 	return 0;
@@ -277,12 +288,14 @@ static int mmap_dup(pTHX_ MAGIC* magic, CLONE_PARAMS* param) {
 #define mmap_dup 0
 #endif
 
-static const MGVTBL mmap_table  = { 0, mmap_write, 0, mmap_clear, mmap_free,  0, mmap_dup };
-static const MGVTBL empty_table = { 0, 0,          0, mmap_clear, empty_free, 0, mmap_dup };
+static const MGVTBL mmap_table  = { 0, mmap_write,  0, mmap_clear, mmap_free,  0, mmap_dup };
+static const MGVTBL empty_table = { 0, empty_write, 0, mmap_clear, empty_free, 0, mmap_dup };
 
 static void check_new_variable(pTHX_ SV* var) {
 	if (SvTYPE(var) > SVt_PVMG && SvTYPE(var) != SVt_PVLV)
 		Perl_croak(aTHX_ "Trying to map into a nonscalar!\n");
+	if (SvREADONLY(var))
+		Perl_croak(aTHX_ PL_no_modify);
 	if (SvMAGICAL(var) && mg_find(var, PERL_MAGIC_uvar))
 		sv_unmagic(var, PERL_MAGIC_uvar);
 	if (SvPOK(var)) 
@@ -337,7 +350,7 @@ static void add_magic(pTHX_ SV* var, struct mmap_info* magical, const MGVTBL* ta
 }
 
 static int is_stattable(int fd) {
-	struct stat info;
+	Stat_t info;
 	return Fstat(fd, &info) == 0 && (S_ISREG(info.st_mode) || S_ISBLK(info.st_mode));
 }
 
@@ -362,12 +375,25 @@ static void magic_end(pTHX_ void* pre_info) {
 }
 #endif
 
+static int _protection_value(pTHX_ SV* prot) {
+	HV* protections = get_hv("File::Map::PROTECTION_FOR", FALSE);
+	if (SvPOK(prot) && hv_exists_ent(protections, prot, 0)) {
+		HE* prot_entry = hv_fetch_ent(protections, prot, FALSE, 0);
+		return SvIV(HeVAL(prot_entry));
+	}
+	else if (SvIOK(prot))
+		return SvIV(prot);
+	Perl_croak(aTHX_ "Unknown protection value '%s'", SvPV_nolen(prot));
+}
+
+#define protection_value(prot) _protection_value(aTHX_ prot)
+
 #define YES &PL_sv_yes
 
 #define MAP_CONSTANT(cons) STMT_START {\
 	newCONSTSUB(stash, #cons, newSVuv(cons));\
-	av_push(constants, newSVuv(cons));\
-	av_push(export_ok, newSVuv(cons));\
+	av_push(constants, newSVpv(#cons, 0));\
+	av_push(export_ok, newSVpv(#cons, 0));\
 } STMT_END
 #define ADVISE_CONSTANT(key, value) hv_store(advise_constants, key, sizeof key - 1, newSVuv(value), 0)
 
@@ -459,8 +485,6 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 			add_magic(aTHX_ var, magical, &mmap_table, prot & PROT_WRITE);
 		}
 		else {
-			if (prot & PROT_WRITE)
-				real_croak_pv(aTHX_ "Can't map empty file writably");
 			if (!is_stattable(fd))
 				real_croak_pv(aTHX_ "Could not map: handle doesn't refer to a file");
 			sv_setpvn(var, "", 0);
@@ -544,6 +568,21 @@ advise(var, name)
 		}
 		else if (madvise(info->real_address, info->real_length, SvUV(HeVAL(value))) == -1)
 			die_sys(aTHX_ "Could not advice: %s");
+
+void
+protect(var, prot)
+	SV* var = deref_var(aTHX_ ST(0));
+	SV* prot;
+	PROTOTYPE: \$@
+	CODE:
+		struct mmap_info* info = get_mmap_magic(aTHX_ var, "protect");
+		int prot_val = protection_value(prot);
+		if (!EMPTY_MAP(info))
+			mprotect(info->real_address, info->real_length, prot_val);
+		if (prot_val & PROT_WRITE)
+			SvREADONLY_off(var);
+		else 
+			SvREADONLY_on(var);
 
 void
 lock_map(var)
