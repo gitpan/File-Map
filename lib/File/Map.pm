@@ -1,6 +1,6 @@
 package File::Map;
 
-# This software is copyright (c) 2008, 2009 by Leon Timmermans <leont@cpan.org>.
+# This software is copyright (c) 2008, 2009, 2010 by Leon Timmermans <leont@cpan.org>.
 #
 # This is free software; you can redistribute it and/or modify it under
 # the same terms as perl itself.
@@ -11,14 +11,14 @@ use warnings FATAL => 'all';
 
 use Exporter 5.57 'import';
 use XSLoader;
-use Symbol qw/qualify_to_ref/;
 use Carp qw/croak/;
 use Readonly 1.03;
+use PerlIO;
 
 our (@EXPORT_OK, %EXPORT_TAGS);
 
 BEGIN {
-	our $VERSION = '0.23';
+	our $VERSION = '0.24';
 
 	XSLoader::load('File::Map', $VERSION);
 }
@@ -36,6 +36,8 @@ while (my ($category, $functions) = each %export_data) {
 	}
 }
 
+@{ $EXPORT_TAGS{all} } = @EXPORT_OK;
+
 Readonly our %PROTECTION_FOR => (
 	'<'  => PROT_READ,
 	'+<' => PROT_READ | PROT_WRITE,
@@ -43,42 +45,53 @@ Readonly our %PROTECTION_FOR => (
 	'+>' => PROT_READ | PROT_WRITE,
 );
 
-Readonly my $ANON_FH, -1;
+Readonly my $ANON_FH => -1;
 
-## no critic (ProhibitSubroutinePrototypes)
+Readonly my %is_binary => map { ($_ => 1) } qw/unix stdio perlio mmap/;
 
-sub map_handle(\$*@) {
-	my ($var_ref, $glob, $mode, $offset, $length) = @_;
-	my $fh = qualify_to_ref($glob, caller);
-	$offset ||= 0;
-	$length ||= (-s $fh) - $offset;
-	_mmap_impl($var_ref, $length, $PROTECTION_FOR{ $mode || '<' }, MAP_SHARED | MAP_FILE, fileno $fh, $offset);
+sub _check_layers {
+	my $fh = shift;
+	for my $layer (PerlIO::get_layers($fh)) {
+		croak "Can't mmap not binary filehandle: layer '$layer' is not binary" if not $is_binary{$layer};
+	}
 	return;
 }
 
-sub map_file(\$@) {
-	my ($var_ref, $filename, $mode, $offset, $length) = @_;
+## no critic (Subroutines::RequireArgUnpacking)
+
+sub map_handle {
+	my (undef, $fh, $mode, $offset, $length) = @_;
+	_check_layers($fh);
+	$offset ||= 0;
+	$length ||= (-s $fh) - $offset;
+	_mmap_impl($_[0], $length, $PROTECTION_FOR{ $mode || '<' }, MAP_SHARED | MAP_FILE, fileno $fh, $offset);
+	return;
+}
+
+sub map_file {
+	my (undef, $filename, $mode, $offset, $length) = @_;
 	$mode   ||= '<';
 	$offset ||= 0;
-	open my $fh, $mode, $filename or croak "Couldn't open file $filename: $!";
+	open my $fh, "$mode:raw", $filename or croak "Couldn't open file $filename: $!";
 	$length ||= (-s $fh) - $offset;
-	_mmap_impl($var_ref, $length, $PROTECTION_FOR{$mode}, MAP_SHARED | MAP_FILE, fileno $fh, $offset);
+	_mmap_impl($_[0], $length, $PROTECTION_FOR{$mode}, MAP_SHARED | MAP_FILE, fileno $fh, $offset);
 	close $fh or croak "Couldn't close $filename after mapping: $!";
 	return;
 }
 
-sub map_anonymous(\$@) {
-	my ($var_ref, $length) = @_;
+sub map_anonymous {
+	my (undef, $length) = @_;
 	croak 'Zero length specified for anonymous map' if $length == 0;
-	_mmap_impl($var_ref, $length, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, $ANON_FH, 0);
+	_mmap_impl($_[0], $length, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, $ANON_FH, 0);
 	return;
 }
 
-sub sys_map(\$$$$*;$) {    ## no critic (ProhibitManyArgs)
-	my ($var_ref, $length, $protection, $flags, $glob, $offset) = @_;
-	my $fd = ($flags & MAP_ANONYMOUS) ? $ANON_FH : fileno qualify_to_ref($glob, caller);
+sub sys_map {    ## no critic (ProhibitManyArgs)
+	my (undef, $length, $protection, $flags, $fh, $offset) = @_;
+	_check_layers($fh);
+	my $fd = ($flags & MAP_ANONYMOUS) ? $ANON_FH : $fh;
 	$offset ||= 0;
-	_mmap_impl($var_ref, $length, $protection, $flags, $fd, $offset);
+	_mmap_impl($_[0], $length, $protection, $flags, $fd, $offset);
 	return;
 }
 
@@ -92,7 +105,7 @@ File::Map - Memory mapping made simple and safe.
 
 =head1 VERSION
 
-Version 0.23
+Version 0.24
 
 =head1 SYNOPSIS
 
@@ -154,17 +167,15 @@ It has built-in support for thread synchronization.
 
 =head1 FUNCTIONS
 
-All functions take an lvalue as their first argument. This first argument has a prototype of C<\$>, B<be aware that this may change in a future release>.
-
 =head2 Mapping
 
 The following functions for mapping a variable are available for exportation.
 
 =over 4
 
-=item * map_handle $lvalue, *filehandle, $mode = '<', $offset = 0, $length = -s(*handle) - $offset
+=item * map_handle $lvalue, $filehandle, $mode = '<', $offset = 0, $length = -s(*handle) - $offset
 
-Use a filehandle to map into an lvalue. *filehandle may be a bareword, constant, scalar expression, typeglob, or a reference to a typeglob. $mode uses the same format as C<open> does (it currently accepts C<< < >>, C<< +< >>, C<< > >> and C<< +> >>). $offset and $length are byte positions in the file, and default to mapping the whole file.
+Use a filehandle to map into an lvalue. $filehandle should be a scalar filehandle. $mode uses the same format as C<open> does (it currently accepts C<< < >>, C<< +< >>, C<< > >> and C<< +> >>). $offset and $length are byte positions in the file, and default to mapping the whole file.
 
 =item * map_file $lvalue, $filename, $mode = '<', $offset = 0, $length = -s($filename) - $offset
 
@@ -174,17 +185,17 @@ Open a file and map it into an lvalue. Other than $filename, all arguments work 
 
 Map an anonymous piece of memory.
 
-=item * sys_map $lvalue, $length, $protection, $flags, *filehandle, $offset = 0
+=item * sys_map $lvalue, $length, $protection, $flags, $filehandle, $offset = 0
 
-Low level map operation. It accepts the same constants as map does (except its first argument obviously). If you don't know how mmap works you probably shouldn't be using this.
+Low level map operation. It accepts the same constants as mmap does (except its first argument obviously). If you don't know how mmap works you probably shouldn't be using this.
 
 =item * unmap $lvalue
 
-Unmap a variable. Note that normally this is not necessary, but it is included for completeness.
+Unmap a variable. Note that normally this is not necessary as variables are unmapped automatically at destruction, but it is included for completeness.
 
 =item * remap $lvalue, $new_size
 
-Try to remap $lvalue to a new size. It may fail if there is not sufficient space to expand a mapping at its current location. This call is linux specific and currently not supported on other systems.
+Try to remap $lvalue to a new size. It may fail if there is not sufficient space to expand a mapping at its current location. This call is linux specific and not supported on other systems.
 
 =back
 
@@ -296,6 +307,10 @@ lock_map, wait_until, notify, broadcast
 
 PROT_NONE, PROT_READ, PROT_WRITE, PROT_EXEC, MAP_ANONYMOUS, MAP_SHARED, MAP_PRIVATE, MAP_ANON, MAP_FILE
 
+=item * :all
+
+All functions defined in this module.
+
 =back
 
 =head1 DIAGNOSTICS
@@ -325,6 +340,10 @@ A zero length anonymous map is not possible (or in any way useful).
 =item * Can't remap a shared mapping
 
 An attempts was made to remap a mapping that is shared among different threads, this is not possible.
+
+=item * "Can't mmap not binary filehandle: layer '%s' is not binary"
+
+You tried to to map a filehandle that has some encoding layer. This is not supported by File::Map.
 
 =back
 
@@ -360,7 +379,11 @@ This module does not have any dependencies on non-standard modules.
 
 =head1 PITFALLS
 
-You probably don't want to use C<E<gt>> as a mode. This does not give you reading permissions on many architectures, resulting in segmentation faults (confusingly, it will work on some others like x86).
+On perl versions lower than 5.11.5 many string functions are limited to L<32bit logic|http://rt.perl.org/rt3//Public/Bug/Display.html?id=62646>, even on 64bit architectures. Effectively this means you can't use them on strings bigger than 2GB. If you need to do this, I can only recommend upgrading to 5.12.
+
+This module assumes the file is binary data, and doesn't do any encoding or decoding. You will have to do this manually. You can make it a unicode string in-place by using L<utf8::decode|utf8/"Utility_functions"> if it's valid utf-8, but writing to it requires you to really know what you're doing.
+
+You probably don't want to use C<E<gt>> as a mode. This does not give you reading permissions on many architectures, resulting in segmentation faults when trying to read a variable (confusingly, it will work on some others like x86).
 
 =head1 BUGS AND LIMITATIONS
 
@@ -379,6 +402,8 @@ automatically be notified of progress on your bug as I make changes.
 =item * L<IPC::Mmap>, another mmap module
 
 =item * L<mmap(2)>, your mmap man page
+
+=item * L<Win32::MMF>
 
 =item * CreateFileMapping at MSDN: L<http://msdn.microsoft.com/en-us/library/aa366537(VS.85).aspx>
 
