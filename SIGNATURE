@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.55.
+signed via the Module::Signature module, version 0.61.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -14,30 +14,31 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 36864f28c2c6f61be002f30a68eae72f82c31cae Build.PL
-SHA1 0159164564690f9bedc149a89a55fd262663f42c Changes
+SHA1 79b753129320cfdc316804a399a086090e6bdf3f Build.PL
+SHA1 ea1b45ee8a324b94a8cabc812e235751647cdebe Changes
 SHA1 c6942937bfe0adaf485673a0522e04e3c4dee40e LICENSE
-SHA1 15577f35d23cc81d2a7bb456c58cc7f324d2b097 MANIFEST
-SHA1 45adcf2995e41c703f8b74473d2e55e6accadf76 META.yml
-SHA1 5ed034ee0ab9c52e42499e23cd3b88b721fc6a7f Makefile.PL
-SHA1 205c79fcdcfa40f445977daa961a278a402aca1a README
-SHA1 fa2feb6c2444dec7c69db222aa138a2e8c9c16a0 lib/File/Map.pm
-SHA1 56f24b32b54c8dc8b6967df1bad602086e3e23fc lib/File/Map.xs
+SHA1 177819a092bfec42e2d077901aeb772b187b020b MANIFEST
+SHA1 028c7f5df5aa769d940decc19187e053e8b21780 META.yml
+SHA1 b2616b5bb178cdeefae4e3abb0ce65af36857571 Makefile.PL
+SHA1 2485d4116c19e06cb8ea5736588230def9500b92 README
+SHA1 2919db03645682e8afa8cdb5d6e3a7d312985a50 examples/fastsearch.pl
+SHA1 f7433dcbbb5d8f46e41bdf4a02cf4e63c5ca617f lib/File/Map.pm
+SHA1 f7111731b485f751b295835be79b7bfbd0106178 lib/File/Map.xs
 SHA1 7a2fd64507bdd076dfef0bfbf49440062630e185 t/00-load.t
 SHA1 f70da8eac2a0ee682ede4cb68260eb40dad86e76 t/10-basics.t
 SHA1 dcb535ce4e7bb30ec1365db92ad42827fe5259af t/10-empty.t
 SHA1 7a625b9765f32358ad9148004df1b33e3b1b70dd t/20-edges.t
-SHA1 451f8568dc947c41bcf88dcc63fab22c6f7fd74d t/20-errors.t
-SHA1 d54affab44306794510332923d0d7d61e0200bb7 t/20-protect.t
+SHA1 7687c2abc98d8e52748e302e30129d5df602496f t/20-errors.t
+SHA1 10f8b3a8603359af06c17bab7d416e7baf18d1b4 t/20-protect.t
 SHA1 e777235188926bc8d23753c5ea7e8b6580f84200 t/20-threads.t
 SHA1 0f4873bcd313d56f917f44cf983e844f406b6758 t/20-unicode.t
 SHA1 0b1c5a2d59be6bfa7d60c64cd964fea6a0331705 t/pod-coverage.t
 SHA1 640935336dc1123c0069bcf5432bcaedc2cf22d3 t/pod.t
 SHA1 93cca12342c0761892ee750c80dfa378cc5fb6bc typemap
 -----BEGIN PGP SIGNATURE-----
-Version: GnuPG v1.4.9 (GNU/Linux)
+Version: GnuPG v1.4.10 (GNU/Linux)
 
-iEYEARECAAYFAkvTdzcACgkQTd+EWiaICwrBKgCeK//bI6gOqlB4VfX6ZxwbVDyV
-Y4AAnRt+EQdhNQxwK9v0m0695GGeLwSq
-=DYo0
+iEYEARECAAYFAkx07tQACgkQTd+EWiaICwqf1wCggFqtOQIm/mU2f9r/W35nqGXs
+BoEAnRUhxs7JHW7dTmfVBbvbS/tjtW2b
+=N8R/
 -----END PGP SIGNATURE-----

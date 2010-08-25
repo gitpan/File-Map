@@ -188,8 +188,8 @@ static void reset_var(SV* var, struct mmap_info* info, size_t length) {
 
 static void mmap_fixup(pTHX_ SV* var, struct mmap_info* info, const char* string, STRLEN len) {
 	if (ckWARN(WARN_SUBSTR)) {
-		Perl_warn(aTHX_ "Writing directly to a to a memory mapped file is not recommended");
-		if (SvLEN(var) > info->fake_length)
+		Perl_warn(aTHX_ "Writing directly to a memory mapped file is not recommended");
+		if (SvCUR(var) >= info->fake_length)
 			Perl_warn(aTHX_ "Truncating new value to size of the memory map");
 	}
 
@@ -239,7 +239,7 @@ static int mmap_free(pTHX_ SV* var, MAGIC* magic) {
 		MUTEX_DESTROY(&info->data_mutex);
 		MUTEX_UNLOCK(&info->count_mutex);
 		MUTEX_DESTROY(&info->count_mutex);
-		Safefree(info);
+		PerlMemShared_free(info);
 	}
 	else {
 		if (msync(info->real_address, info->real_length, MS_ASYNC) == -1)
@@ -249,7 +249,7 @@ static int mmap_free(pTHX_ SV* var, MAGIC* magic) {
 #else
 	if (munmap(info->real_address, info->real_length) == -1)
 		die_sys(aTHX_ "Could not unmap: %s");
-	Safefree(info);
+	PerlMemShared_free(info);
 #endif 
 	SvREADONLY_off(var);
 	SvPVX(var) = NULL;
@@ -266,13 +266,13 @@ static int empty_free(pTHX_ SV* var, MAGIC* magic) {
 		MUTEX_DESTROY(&info->data_mutex);
 		MUTEX_UNLOCK(&info->count_mutex);
 		MUTEX_DESTROY(&info->count_mutex);
-		Safefree(info);
+		PerlMemShared_free(info);
 	}
 	else {
 		MUTEX_UNLOCK(&info->count_mutex);
 	}
 #else
-	Safefree(info);
+	PerlMemShared_free(info);
 #endif 
 	SvREADONLY_off(var);
 	SvPV_free(var);
@@ -336,8 +336,7 @@ static void* do_mapping(pTHX_ size_t length, int prot, int flags, int fd, off_t 
 }
 
 static struct mmap_info* initialize_mmap_info(void* address, size_t length, ptrdiff_t correction) {
-	struct mmap_info* magical;
-	New(0, magical, 1, struct mmap_info);
+	struct mmap_info* magical = PerlMemShared_malloc(sizeof *magical);
 	magical->real_address = address;
 	magical->fake_address = (char*)address + correction;
 	magical->real_length = length + correction;
@@ -491,6 +490,8 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 		
 		if (length) {
 			ptrdiff_t correction = offset % page_size();
+			if (length > ULONG_MAX - correction)
+				real_croak_pv(aTHX_ "Can't map: length + offset overflows");
 			void* address = do_mapping(aTHX_ length + correction, prot, flags, fd, offset - correction);
 			
 			struct mmap_info* magical = initialize_mmap_info(address, length, correction);

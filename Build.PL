@@ -19,12 +19,14 @@ my $builder = Module::Build->new(
 		'Test::More'   => 0,
 		'Test::Warn'   => 0,
 		'Time::HiRes'  => 0,
-		threads        => 0,
 	},
 	requires => {
 		perl           => 5.008,
 		Readonly       => 1.03,
 		Exporter       => 5.57,
+	},
+	suggests => {
+		perl           => 5.012,
 	},
 	meta_merge => {
 		resources      => {
