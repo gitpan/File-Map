@@ -193,7 +193,8 @@ static void mmap_fixup(pTHX_ SV* var, struct mmap_info* info, const char* string
 			Perl_warn(aTHX_ "Truncating new value to size of the memory map");
 	}
 
-	Copy(string, info->fake_address, MIN(len, info->fake_length), char);
+	if (string && len)
+		Copy(string, info->fake_address, MIN(len, info->fake_length), char);
 	if (SvROK(var))
 		sv_unref_flags(var, SV_IMMEDIATE_UNREF);
 	if (SvPOK(var))
@@ -203,7 +204,9 @@ static void mmap_fixup(pTHX_ SV* var, struct mmap_info* info, const char* string
 
 static int mmap_write(pTHX_ SV* var, MAGIC* magic) {
 	struct mmap_info* info = (struct mmap_info*) magic->mg_ptr;
-	if (!SvPOK(var)) {
+	if (!SvOK(var))
+		mmap_fixup(aTHX_ var, info, NULL, 0);
+	else if (!SvPOK(var)) {
 		STRLEN len;
 		const char* string = SvPV(var, len);
 		mmap_fixup(aTHX_ var, info, string, len);
@@ -294,8 +297,17 @@ static int mmap_dup(pTHX_ MAGIC* magic, CLONE_PARAMS* param) {
 #define mmap_dup 0
 #endif
 
-static const MGVTBL mmap_table  = { 0, mmap_write,  0, mmap_clear, mmap_free,  0, mmap_dup };
-static const MGVTBL empty_table = { 0, empty_write, 0, mmap_clear, empty_free, 0, mmap_dup };
+#ifdef MGf_LOCAL
+static int mmap_local(pTHX_ SV* var, MAGIC* magic) {
+	Perl_croak(aTHX_ "Can't localize file map");
+}
+#define mmap_local_tail , mmap_local
+#else
+#define mmap_local_tail
+#endif
+
+static const MGVTBL mmap_table  = { 0, mmap_write,  0, mmap_clear, mmap_free,  0, mmap_dup mmap_local_tail };
+static const MGVTBL empty_table = { 0, empty_write, 0, mmap_clear, empty_free, 0, mmap_dup mmap_local_tail };
 
 static void check_new_variable(pTHX_ SV* var) {
 	if (SvTYPE(var) > SVt_PVMG && SvTYPE(var) != SVt_PVLV)
@@ -335,7 +347,7 @@ static void* do_mapping(pTHX_ size_t length, int prot, int flags, int fd, off_t 
 	return address;
 }
 
-static struct mmap_info* initialize_mmap_info(void* address, size_t length, ptrdiff_t correction) {
+static struct mmap_info* initialize_mmap_info(pTHX_ void* address, size_t length, ptrdiff_t correction) {
 	struct mmap_info* magical = PerlMemShared_malloc(sizeof *magical);
 	magical->real_address = address;
 	magical->fake_address = (char*)address + correction;
@@ -353,6 +365,7 @@ static struct mmap_info* initialize_mmap_info(void* address, size_t length, ptrd
 static void add_magic(pTHX_ SV* var, struct mmap_info* magical, const MGVTBL* table, int writable) {
 	MAGIC* magic = sv_magicext(var, NULL, PERL_MAGIC_uvar, table, (const char*) magical, 0);
 	magic->mg_private = MMAP_MAGIC_NUMBER;
+	magic->mg_flags |= MGf_LOCAL;
 #ifdef USE_ITHREADS
 	magic->mg_flags |= MGf_DUP;
 #endif
@@ -397,11 +410,7 @@ static int _protection_value(pTHX_ SV* prot) {
 
 #define YES &PL_sv_yes
 
-#define MAP_CONSTANT(cons) STMT_START {\
-	newCONSTSUB(stash, #cons, newSVuv(cons));\
-	av_push(constants, newSVpv(#cons, 0));\
-	av_push(export_ok, newSVpv(#cons, 0));\
-} STMT_END
+#define MAP_CONSTANT(cons) newCONSTSUB(stash, #cons, newSVuv(cons))
 #define ADVISE_CONSTANT(key, value) hv_store(advise_constants, key, sizeof key - 1, newSVuv(value), 0)
 
 #define EMPTY_MAP(info) ((info)->real_length == 0)
@@ -413,11 +422,9 @@ static int _protection_value(pTHX_ SV* prot) {
 
 static boot(pTHX) {
 	AV* constants = newAV();
-	AV* export_ok = get_av("File::Map::EXPORT_OK", TRUE);
 	HV* stash = get_hv("File::Map::", FALSE);
 	HV* advise_constants = newHV();
 
-	hv_store(get_hv("File::Map::EXPORT_TAGS", TRUE), "constants", 9, newRV_inc((SV*) constants), 0);
 	MAP_CONSTANT(PROT_NONE);
 	MAP_CONSTANT(PROT_READ);
 	MAP_CONSTANT(PROT_WRITE);
@@ -494,7 +501,7 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 				real_croak_pv(aTHX_ "Can't map: length + offset overflows");
 			void* address = do_mapping(aTHX_ length + correction, prot, flags, fd, offset - correction);
 			
-			struct mmap_info* magical = initialize_mmap_info(address, length, correction);
+			struct mmap_info* magical = initialize_mmap_info(aTHX_ address, length, correction);
 			reset_var(var, magical, 0);
 			add_magic(aTHX_ var, magical, &mmap_table, prot & PROT_WRITE);
 		}
@@ -504,7 +511,7 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 				real_croak_pv(aTHX_ "Could not map: handle doesn't refer to a file");
 			sv_setpvn(var, "", 0);
 
-			magical = initialize_mmap_info(SvPV_nolen(var), 0, 0);
+			magical = initialize_mmap_info(aTHX_ SvPV_nolen(var), 0, 0);
 			reset_var(var, magical, SvCUR(var));
 			add_magic(aTHX_ var, magical, &empty_table, prot & PROT_WRITE);
 		}

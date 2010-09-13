@@ -22,8 +22,8 @@ my $builder = Module::Build->new(
 	},
 	requires => {
 		perl           => 5.008,
-		Readonly       => 1.03,
-		Exporter       => 5.57,
+		'Const::Fast'  => 0,
+		'Sub::Exporter'=> 0,
 	},
 	suggests => {
 		perl           => 5.012,
