@@ -365,7 +365,9 @@ static struct mmap_info* initialize_mmap_info(pTHX_ void* address, size_t length
 static void add_magic(pTHX_ SV* var, struct mmap_info* magical, const MGVTBL* table, int writable) {
 	MAGIC* magic = sv_magicext(var, NULL, PERL_MAGIC_uvar, table, (const char*) magical, 0);
 	magic->mg_private = MMAP_MAGIC_NUMBER;
+#ifdef MGf_LOCAL
 	magic->mg_flags |= MGf_LOCAL;
+#endif
 #ifdef USE_ITHREADS
 	magic->mg_flags |= MGf_DUP;
 #endif
@@ -373,12 +375,12 @@ static void add_magic(pTHX_ SV* var, struct mmap_info* magical, const MGVTBL* ta
 		SvREADONLY_on(var);
 }
 
-static int _is_stattable(pTHX_ int fd) {
+static int _is_mappable(pTHX_ int fd) {
 	Stat_t info;
 	return Fstat(fd, &info) == 0 && (S_ISREG(info.st_mode) || S_ISBLK(info.st_mode));
 }
 
-#define is_stattable(fd) _is_stattable(aTHX_ fd)
+#define is_mappable(fd) _is_mappable(aTHX_ fd)
 
 static struct mmap_info* get_mmap_magic(pTHX_ SV* var, const char* funcname) {
 	MAGIC* magic;
@@ -507,12 +509,11 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 		}
 		else {
 			struct mmap_info* magical;
-			if (!is_stattable(fd))
+			if (!is_mappable(fd))
 				real_croak_pv(aTHX_ "Could not map: handle doesn't refer to a file");
 			sv_setpvn(var, "", 0);
 
 			magical = initialize_mmap_info(aTHX_ SvPV_nolen(var), 0, 0);
-			reset_var(var, magical, SvCUR(var));
 			add_magic(aTHX_ var, magical, &empty_table, prot & PROT_WRITE);
 		}
 
