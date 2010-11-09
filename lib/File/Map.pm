@@ -16,7 +16,7 @@ use Const::Fast;
 use PerlIO ();
 
 BEGIN {
-	our $VERSION = '0.31';
+	our $VERSION = '0.32';
 
 	XSLoader::load('File::Map', $VERSION);
 }
@@ -54,6 +54,7 @@ const my %is_binary => map { ($_ => 1) } qw/unix stdio perlio mmap crlf/;    # c
 
 sub _check_layers {
 	my $fh = shift;
+	croak "Can't map fake filehandle" if fileno $fh < 0;
 	return if not warnings::enabled('layer');
 	for my $layer (PerlIO::get_layers($fh)) {
 		carp "Shouldn't mmap non-binary filehandle: layer '$layer' is not binary" if not exists $is_binary{$layer};
@@ -118,7 +119,7 @@ File::Map - Memory mapping made simple and safe.
 
 =head1 VERSION
 
-Version 0.31
+Version 0.32
 
 =head1 SYNOPSIS
 
@@ -357,6 +358,10 @@ An attempts was made to remap a mapping that is shared among different threads, 
 =item * Window ($start, $end) is outside the file
 
 The offset and/or length you specified were invalid for this file.
+
+=item * Can't map fake filehandle
+
+The filehandle you provided is not real. This may mean it's a scalar string handle.
 
 =back
 

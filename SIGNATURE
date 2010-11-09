@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.61.
+signed via the Module::Signature module, version 0.63.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -15,30 +15,30 @@ not run its Makefile.PL or Build.PL.
 Hash: SHA1
 
 SHA1 ed71d1fc994bc273b8b7717aa4fb5e7c324e82f9 Build.PL
-SHA1 079c6efb74fcd535c6dfd094ddba47b0737b4296 Changes
+SHA1 1971ea0eceffbe61b12ba3feaa4934594e418d8b Changes
 SHA1 c6942937bfe0adaf485673a0522e04e3c4dee40e LICENSE
 SHA1 177819a092bfec42e2d077901aeb772b187b020b MANIFEST
-SHA1 09aa28f666f8d696a96320bf148aaae8084ff066 META.yml
-SHA1 b2616b5bb178cdeefae4e3abb0ce65af36857571 Makefile.PL
+SHA1 016a4652a6caed74f7fae17a5b58b4b9f7dd6552 META.yml
+SHA1 4cfedd61a7cd052580d4e2fb2115362978303a4b Makefile.PL
 SHA1 2485d4116c19e06cb8ea5736588230def9500b92 README
 SHA1 2919db03645682e8afa8cdb5d6e3a7d312985a50 examples/fastsearch.pl
-SHA1 cac81a0278550599d6e8aef2d8b34216c9c4037a lib/File/Map.pm
+SHA1 7b01ba5ea28b69dd5936b3e0ac6f61c3a3c79674 lib/File/Map.pm
 SHA1 46851ce9d3feae6d55ef4e9f25508bf9b159ef24 lib/File/Map.xs
 SHA1 7a2fd64507bdd076dfef0bfbf49440062630e185 t/00-load.t
 SHA1 f70da8eac2a0ee682ede4cb68260eb40dad86e76 t/10-basics.t
 SHA1 dcb535ce4e7bb30ec1365db92ad42827fe5259af t/10-empty.t
 SHA1 7a625b9765f32358ad9148004df1b33e3b1b70dd t/20-edges.t
-SHA1 051e99a00e83a083f8cfefc33cfbc6d2d4e128cc t/20-errors.t
+SHA1 ca44997c6e96b7bef98b8f4b6a9add75e444e504 t/20-errors.t
 SHA1 10f8b3a8603359af06c17bab7d416e7baf18d1b4 t/20-protect.t
 SHA1 e777235188926bc8d23753c5ea7e8b6580f84200 t/20-threads.t
-SHA1 8bf24bb31e50772e8713b8be963939bd45162d71 t/20-unicode.t
+SHA1 3a1985919f376f3b843f9b72234da2004417208f t/20-unicode.t
 SHA1 0b1c5a2d59be6bfa7d60c64cd964fea6a0331705 t/pod-coverage.t
 SHA1 640935336dc1123c0069bcf5432bcaedc2cf22d3 t/pod.t
 SHA1 93cca12342c0761892ee750c80dfa378cc5fb6bc typemap
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.10 (GNU/Linux)
 
-iEYEARECAAYFAkyXen0ACgkQTd+EWiaICwpFpgCfTZkpzNyo0h2haeJ7u8kZ3nzK
-DI0An3Dt96afe3p8djiz1rgTtdfP2qbe
-=6evm
+iEYEARECAAYFAkzZPFEACgkQTd+EWiaICwr88ACeOy4If/+kfiVYnZ9svjuauU2y
+tokAn1gGlsDuuJTrsYVFwU8v6dems7iD
+=kOgr
 -----END PGP SIGNATURE-----

@@ -1,14 +1,7 @@
 ---
-name: File-Map
-version: 0.31
+abstract: 'Memory mapping made simple and safe.'
 author:
   - 'Leon Timmermans <leont@cpan.org>'
-abstract: Memory mapping made simple and safe.
-license: perl
-resources:
-  bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Map
-  license: http://dev.perl.org/licenses/
-  repository: http://github.com/Leont/file-map/tree
 build_requires:
   ExtUtils::CBuilder: 0
   IO::Handle: 0
@@ -17,20 +10,27 @@ build_requires:
   Test::More: 0
   Test::Warn: 0
   Time::HiRes: 0
+configure_requires:
+  Module::Build: 0
+generated_by: 'Module::Build version 0.3607'
+keywords:
+  - mmap
+  - 'memory mapping'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: File-Map
+provides:
+  File::Map:
+    file: lib/File/Map.pm
+    version: 0.32
 requires:
   Const::Fast: 0
   Sub::Exporter: 0
   perl: 5.008
-configure_requires:
-  Module::Build: 0
-provides:
-  File::Map:
-    file: lib/File/Map.pm
-    version: 0.31
-generated_by: Module::Build version 0.340201
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
-keywords:
-  - mmap
-  - memory mapping
+resources:
+  bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Map
+  license: http://dev.perl.org/licenses/
+  repository: http://github.com/Leont/file-map/tree
+version: 0.32
