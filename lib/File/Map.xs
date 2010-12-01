@@ -6,6 +6,13 @@
  *
  */
 
+#if defined linux
+#	ifndef _GNU_SOURCE
+#		define _GNU_SOURCE
+#	endif
+#	define GNU_STRERROR_R
+#endif
+
 #ifdef __CYGWIN__
 #	undef WIN32
 #	undef _WIN32
@@ -24,6 +31,7 @@
 #	define MAP_PRIVATE 1
 #	define MAP_ANONYMOUS 2
 #else /* WIN32 */
+#	include <string.h>
 #	include <sys/types.h>
 #	include <sys/mman.h>
 #	include <unistd.h>
@@ -63,6 +71,7 @@ struct mmap_info {
 	void* fake_address;
 	size_t real_length;
 	size_t fake_length;
+	int flags;
 #ifdef USE_ITHREADS
 	perl_mutex count_mutex;
 	perl_mutex data_mutex;
@@ -125,7 +134,7 @@ static const struct {
 #else
 
 static void get_sys_error(char* buffer, size_t buffer_size) {
-#ifdef _GNU_SOURCE
+#ifdef GNU_STRERROR_R
 	const char* message = strerror_r(errno, buffer, buffer_size);
 	if (message != buffer)
 		memcpy(buffer, message, buffer_size);
@@ -179,9 +188,9 @@ static void croak_sys(pTHX_ const char* format) {
 
 #define PROT_ALL (PROT_READ | PROT_WRITE | PROT_EXEC)
 
-static void reset_var(SV* var, struct mmap_info* info, size_t length) {
+static void reset_var(SV* var, struct mmap_info* info) {
 	SvPVX(var) = info->fake_address;
-	SvLEN(var) = length;
+	SvLEN(var) = 0;
 	SvCUR(var) = info->fake_length;
 	SvPOK_only(var);
 }
@@ -199,7 +208,7 @@ static void mmap_fixup(pTHX_ SV* var, struct mmap_info* info, const char* string
 		sv_unref_flags(var, SV_IMMEDIATE_UNREF);
 	if (SvPOK(var))
 		SvPV_free(var);
-	reset_var(var, info, 0);
+	reset_var(var, info);
 }
 
 static int mmap_write(pTHX_ SV* var, MAGIC* magic) {
@@ -347,8 +356,7 @@ static void* do_mapping(pTHX_ size_t length, int prot, int flags, int fd, off_t 
 	return address;
 }
 
-static struct mmap_info* initialize_mmap_info(pTHX_ void* address, size_t length, ptrdiff_t correction) {
-	struct mmap_info* magical = PerlMemShared_malloc(sizeof *magical);
+static void S_set_mmap_info(pTHX_ struct mmap_info* magical, void* address, size_t length, ptrdiff_t correction) {
 	magical->real_address = address;
 	magical->fake_address = (char*)address + correction;
 	magical->real_length = length + correction;
@@ -359,6 +367,13 @@ static struct mmap_info* initialize_mmap_info(pTHX_ void* address, size_t length
 	COND_INIT(&magical->cond);
 	magical->count = 1;
 #endif
+}
+#define set_mmap_info(magical, addres, length, correction) S_set_mmap_info(aTHX_ magical, addres, length, correction)
+
+static struct mmap_info* initialize_mmap_info(pTHX_ void* address, size_t length, ptrdiff_t correction, int flags) {
+	struct mmap_info* magical = PerlMemShared_malloc(sizeof *magical);
+	set_mmap_info(magical, address, length, correction);
+	magical->flags = flags;
 	return magical;
 }
 
@@ -499,12 +514,14 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 		
 		if (length) {
 			ptrdiff_t correction = offset % page_size();
+			void* address;
+			struct mmap_info* magical;
 			if (length > ULONG_MAX - correction)
 				real_croak_pv(aTHX_ "Can't map: length + offset overflows");
-			void* address = do_mapping(aTHX_ length + correction, prot, flags, fd, offset - correction);
+			address = do_mapping(aTHX_ length + correction, prot, flags, fd, offset - correction);
 			
-			struct mmap_info* magical = initialize_mmap_info(aTHX_ address, length, correction);
-			reset_var(var, magical, 0);
+			magical = initialize_mmap_info(aTHX_ address, length, correction, flags);
+			reset_var(var, magical);
 			add_magic(aTHX_ var, magical, &mmap_table, prot & PROT_WRITE);
 		}
 		else {
@@ -513,7 +530,7 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 				real_croak_pv(aTHX_ "Could not map: handle doesn't refer to a file");
 			sv_setpvn(var, "", 0);
 
-			magical = initialize_mmap_info(aTHX_ SvPV_nolen(var), 0, 0);
+			magical = initialize_mmap_info(aTHX_ SvPV_nolen(var), 0, 0, flags);
 			add_magic(aTHX_ var, magical, &empty_table, prot & PROT_WRITE);
 		}
 
@@ -537,6 +554,8 @@ remap(var, new_size)
 	size_t new_size;
 	PREINIT:
 		struct mmap_info* info = get_mmap_magic(aTHX_ var, "remap");
+		ptrdiff_t correction = info->real_length - info->fake_length;
+		void* new_address;
 	CODE:
 #ifdef USE_ITHREADS
 		if (info->count != 1)
@@ -546,8 +565,12 @@ remap(var, new_size)
 			Perl_croak(aTHX_ "Can't remap empty map"); /* XXX */
 		if (new_size == 0)
 			Perl_croak(aTHX_ "Can't remap to zero");
-		if (mremap(info->real_address, info->real_length, new_size + (info->real_length - info->fake_length), 0) == MAP_FAILED)
+		if ((info->flags & (MAP_ANONYMOUS|MAP_SHARED)) == (MAP_ANONYMOUS|MAP_SHARED))
+			Perl_croak(aTHX_ "Can't remap a shared anonymous mapping");
+		if ((new_address = mremap(info->real_address, info->real_length, new_size + correction, MREMAP_MAYMOVE)) == MAP_FAILED)
 			die_sys(aTHX_ "Could not remap: %s");
+		set_mmap_info(info, new_address, new_size, correction);
+		reset_var(var, info);
 
 #endif /* __linux__ */
 

@@ -4,9 +4,10 @@ use strict;
 use warnings;
 
 use File::Map qw/:map lock_map sync advise/;
-use Test::More tests => 24;
+use Test::More tests => 27;
 use Test::Warn;
 use Test::Exception;
+use Test::NoWarnings;
 
 open my $self, '<:raw', $0 or die "Couldn't open self: $!";
 my $slurped = do { local $/; <$self> };
@@ -75,3 +76,11 @@ SKIP: {
 	open my $fh, '<', \$mystring;
 	throws_ok { map_handle my ($map), $fh; } qr/Can't map fake filehandle/, 'Mapping a scalar string handle throws an error';
 }
+
+my %hash;
+lives_ok { map_anonymous $hash{'foo'}, 4096 } 'mapping a hash element shouldn\'t croak';
+
+my $x;
+my $y = \$x;
+
+lives_ok { map_anonymous $y, 4096 } 'mapping to a reference shouldn\'t croak';
