@@ -16,7 +16,7 @@ use Const::Fast;
 use PerlIO ();
 
 BEGIN {
-	our $VERSION = '0.33';
+	our $VERSION = '0.34';
 
 	XSLoader::load('File::Map', $VERSION);
 }
@@ -99,7 +99,8 @@ my %flag_for = (
 );
 sub map_anonymous {
 	my (undef, $length, $flag_name) = @_;
-	my $flag = $flag_for{ $flag_name || 'shared' } || croak 'No such flag';
+	my $flag = $flag_for{ $flag_name || 'shared' };
+	croak 'No such flag' if not defined $flag;
 	croak 'Zero length specified for anonymous map' if $length == 0;
 	_mmap_impl($_[0], $length, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | $flag, $ANON_FH, 0);
 	return;
@@ -124,7 +125,7 @@ File::Map - Memory mapping made simple and safe.
 
 =head1 VERSION
 
-Version 0.33
+Version 0.34
 
 =head1 SYNOPSIS
 
