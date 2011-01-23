@@ -134,12 +134,18 @@ static const struct {
 #else
 
 static void get_sys_error(char* buffer, size_t buffer_size) {
-#ifdef GNU_STRERROR_R
+#if _POSIX_VERSION >= 200112L
+#	ifdef GNU_STRERROR_R
 	const char* message = strerror_r(errno, buffer, buffer_size);
 	if (message != buffer)
 		memcpy(buffer, message, buffer_size);
-#else
+#	else
 	strerror_r(errno, buffer, buffer_size);
+#	endif
+#else
+	const char* message = strerror(errno);
+	strncpy(buffer, message, buffer_size - 1);
+	buffer[buffer_size - 1] = '\0';
 #endif
 }
 
@@ -189,10 +195,13 @@ static void croak_sys(pTHX_ const char* format) {
 #define PROT_ALL (PROT_READ | PROT_WRITE | PROT_EXEC)
 
 static void reset_var(SV* var, struct mmap_info* info) {
+	int utf8 = SvUTF8(var);
 	SvPVX(var) = info->fake_address;
 	SvLEN(var) = 0;
 	SvCUR(var) = info->fake_length;
 	SvPOK_only(var);
+	if (utf8)
+		SvUTF8_on(var);
 }
 
 static void mmap_fixup(pTHX_ SV* var, struct mmap_info* info, const char* string, STRLEN len) {
