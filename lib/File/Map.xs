@@ -195,13 +195,10 @@ static void croak_sys(pTHX_ const char* format) {
 #define PROT_ALL (PROT_READ | PROT_WRITE | PROT_EXEC)
 
 static void reset_var(SV* var, struct mmap_info* info) {
-	int utf8 = SvUTF8(var);
 	SvPVX(var) = info->fake_address;
 	SvLEN(var) = 0;
 	SvCUR(var) = info->fake_length;
-	SvPOK_only(var);
-	if (utf8)
-		SvUTF8_on(var);
+	SvPOK_only_UTF8(var);
 }
 
 static void mmap_fixup(pTHX_ SV* var, struct mmap_info* info, const char* string, STRLEN len) {
@@ -231,6 +228,8 @@ static int mmap_write(pTHX_ SV* var, MAGIC* magic) {
 	}
 	else if (SvPVX(var) != info->fake_address)
 		mmap_fixup(aTHX_ var, info, SvPVX(var), SvCUR(var));
+	else
+		SvPOK_only_UTF8(var);
 	return 0;
 }
 
@@ -336,6 +335,8 @@ static void check_new_variable(pTHX_ SV* var) {
 		sv_unmagic(var, PERL_MAGIC_uvar);
 	if (SvROK(var))
 		sv_unref_flags(var, SV_IMMEDIATE_UNREF);
+	if (SvNIOK(var))
+		SvNIOK_off(var);
 	if (SvPOK(var)) 
 		SvPV_free(var);
 	if (SvTYPE(var) < SVt_PVMG)
@@ -395,6 +396,7 @@ static void add_magic(pTHX_ SV* var, struct mmap_info* magical, const MGVTBL* ta
 #ifdef USE_ITHREADS
 	magic->mg_flags |= MGf_DUP;
 #endif
+	SvTAINTED_on(var);
 	if (!writable)
 		SvREADONLY_on(var);
 }
@@ -535,8 +537,10 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 		}
 		else {
 			struct mmap_info* magical;
-			if (!is_mappable(fd))
-				real_croak_pv(aTHX_ "Could not map: handle doesn't refer to a file");
+			if (!is_mappable(fd)) {
+				errno = EACCES;
+				die_sys(aTHX_ "Could not map: %s");
+			}
 			sv_setpvn(var, "", 0);
 
 			magical = initialize_mmap_info(aTHX_ SvPV_nolen(var), 0, 0, flags);

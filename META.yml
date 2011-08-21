@@ -13,7 +13,8 @@ build_requires:
   Time::HiRes: 0
 configure_requires:
   Module::Build: 0
-generated_by: 'Module::Build version 0.3607'
+dynamic_config: 1
+generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.110440'
 keywords:
   - mmap
   - 'memory mapping'
@@ -25,7 +26,7 @@ name: File-Map
 provides:
   File::Map:
     file: lib/File/Map.pm
-    version: 0.37
+    version: 0.38
 requires:
   Const::Fast: 0
   PerlIO::Layers: 0.007
@@ -35,4 +36,4 @@ resources:
   bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Map
   license: http://dev.perl.org/licenses/
   repository: http://github.com/Leont/file-map/tree
-version: 0.37
+version: 0.38

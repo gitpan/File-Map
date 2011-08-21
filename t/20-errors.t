@@ -9,6 +9,9 @@ use Test::More tests => 27;
 use Test::Warn;
 use Test::Exception;
 use Test::NoWarnings;
+use if $^O ne 'MSWin32', POSIX => qw/setlocale LC_ALL/;
+
+setlocale(LC_ALL, 'C') if $^O ne 'MSWin32';
 
 open my $self, '<:raw', $0 or die "Couldn't open self: $!";
 my $slurped = do { local $/; <$self> };
@@ -49,7 +52,7 @@ throws_ok { &map_anonymous('foo', 1000) } qr/^Modification of a read-only value 
 
 SKIP: {
 	my $bound = IO::Socket::INET->new(Listen => 1, ReuseAddr => 1, LocalAddr => 'localhost') or skip "Couldn't make listening socket: $!", 1;
-	throws_ok { map_handle my $foo, $bound } qr/^Could not map: /, 'Can\'t map STDOUT';
+	throws_ok { map_handle my $foo, $bound } qr/^Could not map: Permission denied/, 'Can\'t map STDOUT';
 }
 
 warning_is { advise $mmaped, 'sequential' } undef, 'advice $mmaped, \'readahead\'';
