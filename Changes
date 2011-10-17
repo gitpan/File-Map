@@ -1,6 +1,6 @@
 Revision history for File-Map
 
-0.001     2011-10-17 21:56:55 Europe/Amsterdam 
+0.39      2011-10-17 21:57:47 Europe/Amsterdam 
           Converted module to Dist::Zilla
           Fixed various issues in unit tests
 
