@@ -1,39 +1,44 @@
 ---
 abstract: 'Memory mapping made simple and safe.'
 author:
-  - 'Leon Timmermans <leont@cpan.org>'
+  - 'Leon Timmermans <fawaka@gmail.com>'
 build_requires:
-  ExtUtils::CBuilder: 0
+  Config: 0
+  File::Find: 0
+  File::Temp: 0
   IO::Handle: 0
-  Module::Build: 0
+  IO::Socket::INET: 0
+  Module::Build: 0.3601
+  Scalar::Util: 0
   Test::Exception: 0
   Test::More: 0
   Test::NoWarnings: 0
   Test::Warn: 0
   Time::HiRes: 0
+  if: 0
+  open: 0
+  threads: 0
+  utf8: 0
 configure_requires:
-  Module::Build: 0
-dynamic_config: 1
-generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.110440'
-keywords:
-  - mmap
-  - 'memory mapping'
+  Module::Build: 0.3601
+dynamic_config: 0
+generated_by: 'Dist::Zilla version 4.300000, CPAN::Meta::Converter version 2.110440'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
 name: File-Map
-provides:
-  File::Map:
-    file: lib/File/Map.pm
-    version: 0.38
 requires:
+  Carp: 0
   Const::Fast: 0
-  PerlIO::Layers: 0.007
+  PerlIO::Layers: 0
   Sub::Exporter: 0
+  XSLoader: 0
   perl: 5.008
+  strict: 0
+  subs: 0
+  warnings: 0
 resources:
-  bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Map
-  license: http://dev.perl.org/licenses/
-  repository: http://github.com/Leont/file-map/tree
-version: 0.38
+  bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=File-Map
+  repository: git://github.com/Leont/file-map.git
+version: 0.001

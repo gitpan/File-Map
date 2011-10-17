@@ -1,45 +1,57 @@
-use 5.007003;
+
 use strict;
 use warnings;
-use Module::Build;
 
-my $builder = Module::Build->new(
-	module_name        => 'File::Map',
-	license            => 'perl',
-	dist_author        => 'Leon Timmermans <leont@cpan.org>',
-	dist_version_from  => 'lib/File/Map.pm',
-	configure_requires => {
-		'Module::Build' => 0,
-	},
-	build_requires => {
-		'ExtUtils::CBuilder' => 0,
-		'Module::Build'=> 0,
-		'IO::Handle'   => 0,
-		'Test::Exception' => 0,
-		'Test::More'   => 0,
-		'Test::Warn'   => 0,
-		'Test::NoWarnings' => 0,
-		'Time::HiRes'  => 0,
-	},
-	requires => {
-		perl           => 5.008,
-		'Const::Fast'  => 0,
-		'Sub::Exporter'=> 0,
-		'PerlIO::Layers' => 0.007,
-	},
-	suggests => {
-		perl           => 5.012,
-	},
-	meta_merge => {
-		resources      => {
-			bugtracker => 'http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Map',
-			repository => 'http://github.com/Leont/file-map/tree',
-		},
-		keywords       => [ 'mmap', 'memory mapping' ],
-	},
-	add_to_cleanup     => ['File-Map-*'],
-	create_makefile_pl => 'small',
-	sign               => 1,
+use Module::Build 0.3601;
+
+
+my %module_build_args = (
+  "build_requires" => {
+    "Config" => 0,
+    "File::Find" => 0,
+    "File::Temp" => 0,
+    "IO::Handle" => 0,
+    "IO::Socket::INET" => 0,
+    "Module::Build" => "0.3601",
+    "Scalar::Util" => 0,
+    "Test::Exception" => 0,
+    "Test::More" => 0,
+    "Test::NoWarnings" => 0,
+    "Test::Warn" => 0,
+    "Time::HiRes" => 0,
+    "if" => 0,
+    "open" => 0,
+    "threads" => 0,
+    "utf8" => 0
+  },
+  "configure_requires" => {
+    "Module::Build" => "0.3601"
+  },
+  "dist_abstract" => "Memory mapping made simple and safe.",
+  "dist_author" => [
+    "Leon Timmermans <fawaka\@gmail.com>"
+  ],
+  "dist_name" => "File-Map",
+  "dist_version" => "0.001",
+  "license" => "perl",
+  "module_name" => "File::Map",
+  "recommends" => {},
+  "recursive_test_files" => 1,
+  "requires" => {
+    "Carp" => 0,
+    "Const::Fast" => 0,
+    "PerlIO::Layers" => 0,
+    "Sub::Exporter" => 0,
+    "XSLoader" => 0,
+    "perl" => "5.008",
+    "strict" => 0,
+    "subs" => 0,
+    "warnings" => 0
+  },
+  "script_files" => []
 );
 
-$builder->create_build_script();
+
+my $build = Module::Build->new(%module_build_args);
+
+$build->create_build_script;

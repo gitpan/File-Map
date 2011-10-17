@@ -1,14 +1,10 @@
 {
    "abstract" : "Memory mapping made simple and safe.",
    "author" : [
-      "Leon Timmermans <leont@cpan.org>"
+      "Leon Timmermans <fawaka@gmail.com>"
    ],
-   "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.110440",
-   "keywords" : [
-      "mmap",
-      "memory mapping"
-   ],
+   "dynamic_config" : 0,
+   "generated_by" : "Dist::Zilla version 4.300000, CPAN::Meta::Converter version 2.110440",
    "license" : [
       "perl_5"
    ],
@@ -20,47 +16,59 @@
    "prereqs" : {
       "build" : {
          "requires" : {
-            "ExtUtils::CBuilder" : 0,
-            "IO::Handle" : 0,
-            "Module::Build" : 0,
-            "Test::Exception" : 0,
-            "Test::More" : 0,
-            "Test::NoWarnings" : 0,
-            "Test::Warn" : 0,
-            "Time::HiRes" : 0
+            "Module::Build" : "0.3601"
          }
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : 0
+            "Module::Build" : "0.3601"
          }
       },
       "runtime" : {
          "requires" : {
+            "Carp" : 0,
             "Const::Fast" : 0,
-            "PerlIO::Layers" : "0.007",
+            "PerlIO::Layers" : 0,
             "Sub::Exporter" : 0,
-            "perl" : "5.008"
+            "XSLoader" : 0,
+            "perl" : "5.008",
+            "strict" : 0,
+            "subs" : 0,
+            "warnings" : 0
          }
-      }
-   },
-   "provides" : {
-      "File::Map" : {
-         "file" : "lib/File/Map.pm",
-         "version" : "0.38"
+      },
+      "test" : {
+         "requires" : {
+            "Config" : 0,
+            "File::Find" : 0,
+            "File::Temp" : 0,
+            "IO::Handle" : 0,
+            "IO::Socket::INET" : 0,
+            "Scalar::Util" : 0,
+            "Test::Exception" : 0,
+            "Test::More" : 0,
+            "Test::NoWarnings" : 0,
+            "Test::Warn" : 0,
+            "Time::HiRes" : 0,
+            "if" : 0,
+            "open" : 0,
+            "threads" : 0,
+            "utf8" : 0
+         }
       }
    },
    "release_status" : "stable",
    "resources" : {
       "bugtracker" : {
-         "web" : "http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Map"
+         "mailto" : "bug-file-map at rt.cpan.org",
+         "web" : "http://rt.cpan.org/Public/Dist/Display.html?Name=File-Map"
       },
-      "license" : [
-         "http://dev.perl.org/licenses/"
-      ],
       "repository" : {
-         "url" : "http://github.com/Leont/file-map/tree"
+         "type" : "git",
+         "url" : "git://github.com/Leont/file-map.git",
+         "web" : "http://github.com/Leont/file-map"
       }
    },
-   "version" : "0.38"
+   "version" : "0.001"
 }
+
