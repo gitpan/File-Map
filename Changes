@@ -1,5 +1,9 @@
 Revision history for File-Map
 
+0.40      2011-10-24 20:41:19 Europe/Amsterdam
+          Made STDOUT test more portable
+          Remove all mentioning of VMS
+
 0.39      2011-10-17 21:57:47 Europe/Amsterdam 
           Converted module to Dist::Zilla
           Fixed various issues in unit tests

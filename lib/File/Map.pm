@@ -1,6 +1,6 @@
 package File::Map;
 {
-  $File::Map::VERSION = '0.39';
+  $File::Map::VERSION = '0.40';
 }
 
 # This software is copyright (c) 2008, 2009, 2010 by Leon Timmermans <leont@cpan.org>.
@@ -182,7 +182,7 @@ It offers a simple interface targeted at common usage patterns
 
 =item * Portability
 
-File::Map supports Unix, Windows and VMS.
+File::Map supports Unix and Windows.
 
 =item * Thread synchronization
 
