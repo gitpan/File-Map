@@ -1,5 +1,8 @@
 Revision history for File-Map
 
+0.41      2012-01-14 13:14:23 Europe/Amsterdam
+          Fixed bug on Windows when using offsets
+
 0.40      2011-10-24 20:41:19 Europe/Amsterdam
           Made STDOUT test more portable
           Remove all mentioning of VMS

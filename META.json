@@ -4,7 +4,7 @@
       "Leon Timmermans <fawaka@gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300000, CPAN::Meta::Converter version 2.110440",
+   "generated_by" : "Dist::Zilla version 4.300006, CPAN::Meta::Converter version 2.113640",
    "keywords" : [
       "mmap",
       "memory",
@@ -74,6 +74,6 @@
          "web" : "http://github.com/Leont/file-map"
       }
    },
-   "version" : "0.40"
+   "version" : "0.41"
 }
 
