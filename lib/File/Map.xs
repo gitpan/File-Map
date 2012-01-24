@@ -326,6 +326,15 @@ static int mmap_local(pTHX_ SV* var, MAGIC* magic) {
 static const MGVTBL mmap_table  = { 0, mmap_write,  0, mmap_clear, mmap_free,  0, mmap_dup mmap_local_tail };
 static const MGVTBL empty_table = { 0, empty_write, 0, mmap_clear, empty_free, 0, mmap_dup mmap_local_tail };
 
+static Off_t S_sv_to_offset(pTHX_ SV* var) {
+#if IV_SIZE >= 8
+	return (Off_t)SvUV(var);
+#else
+	return (Off_t)round(SvNV(var)); /* hic sunt dracones */
+#endif
+}
+#define sv_to_offset(var) S_sv_to_offset(aTHX_ var)
+
 static void check_new_variable(pTHX_ SV* var) {
 	if (SvTYPE(var) > SVt_PVMG && SvTYPE(var) != SVt_PVLV)
 		Perl_croak(aTHX_ "Trying to map into a nonscalar!\n");
@@ -343,19 +352,22 @@ static void check_new_variable(pTHX_ SV* var) {
 		sv_upgrade(var, SVt_PVMG);
 }
 
-static void* do_mapping(pTHX_ size_t length, int prot, int flags, int fd, off_t offset) {
+#define BITS32_MASK 0xFFFFFFFF
+
+static void* do_mapping(pTHX_ size_t length, int prot, int flags, int fd, Off_t offset) {
 	void* address;
 #ifdef WIN32
 	HANDLE file;
 	HANDLE mapping;
 	DWORD viewflag;
+	Off_t maxsize = offset + length;
 	prot &= PROT_ALL;
 	file = (flags & MAP_ANONYMOUS) ? INVALID_HANDLE_VALUE : (HANDLE)_get_osfhandle(fd);
-	mapping = CreateFileMapping(file, NULL, winflags[prot].createflag, 0, offset + length, NULL);
+	mapping = CreateFileMapping(file, NULL, winflags[prot].createflag, maxsize >> 32, maxsize & BITS32MASK, NULL);
 	if (mapping == NULL)
 		croak_sys(aTHX_ "Could not map: %s");
 	viewflag = (flags & MAP_PRIVATE) ? (FILE_MAP_COPY | ( prot & PROT_EXEC ? FILE_MAP_EXECUTE : 0 ) ) : winflags[prot].viewflag;
-	address = MapViewOfFile(mapping, viewflag, 0, offset, length);
+	address = MapViewOfFile(mapping, viewflag, offset >> 32, offset & BITS32MASK, length);
 	CloseHandle(mapping);
 	if (address == NULL)
 #else
@@ -519,7 +531,7 @@ _mmap_impl(var, length, prot, flags, fd, offset)
 	int prot;
 	int flags;
 	int fd;
-	off_t offset;
+	Off_t offset;
 	CODE:
 		check_new_variable(aTHX_ var);
 		

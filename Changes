@@ -1,5 +1,9 @@
 Revision history for File-Map
 
+0.42      2012-01-24 23:24:29 Europe/Amsterdam
+          Redone offset handling to be more 32bit compatible
+          Add large file support on Windows
+
 0.41      2012-01-14 13:14:23 Europe/Amsterdam
           Fixed bug on Windows when using offsets
 

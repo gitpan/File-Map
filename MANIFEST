@@ -6,7 +6,6 @@ MANIFEST
 META.json
 META.yml
 README
-SIGNATURE
 dist.ini
 examples/fastsearch.pl
 lib/File/Map.pm
