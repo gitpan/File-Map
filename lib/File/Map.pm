@@ -1,6 +1,6 @@
 package File::Map;
 {
-  $File::Map::VERSION = '0.43';
+  $File::Map::VERSION = '0.44';
 }
 
 # This software is copyright (c) 2008, 2009, 2010 by Leon Timmermans <leont@cpan.org>.
