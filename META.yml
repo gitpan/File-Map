@@ -45,4 +45,4 @@ requires:
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=File-Map
   repository: git://github.com/Leont/file-map.git
-version: 0.44
+version: 0.45

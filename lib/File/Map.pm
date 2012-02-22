@@ -1,6 +1,6 @@
 package File::Map;
 {
-  $File::Map::VERSION = '0.44';
+  $File::Map::VERSION = '0.45';
 }
 
 # This software is copyright (c) 2008, 2009, 2010 by Leon Timmermans <leont@cpan.org>.
@@ -432,6 +432,8 @@ As any piece of software, bugs are likely to exist here. Bug reports are welcome
 Please report any bugs or feature requests to C<bug-file-map at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=File-Map>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
+
+Unicode file mappings are known to be buggy on perl 5.8.7 and lower.
 
 =head1 SEE ALSO
 

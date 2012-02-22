@@ -330,7 +330,7 @@ static Off_t S_sv_to_offset(pTHX_ SV* var) {
 #if IV_SIZE >= 8
 	return (Off_t)SvUV(var);
 #else
-	return (Off_t)round(SvNV(var)); /* hic sunt dracones */
+	return (Off_t)floor(SvNV(var) + 0.5); /* hic sunt dracones */
 #endif
 }
 #define sv_to_offset(var) S_sv_to_offset(aTHX_ var)
@@ -338,6 +338,7 @@ static Off_t S_sv_to_offset(pTHX_ SV* var) {
 static void check_new_variable(pTHX_ SV* var) {
 	if (SvTYPE(var) > SVt_PVMG && SvTYPE(var) != SVt_PVLV)
 		Perl_croak(aTHX_ "Trying to map into a nonscalar!\n");
+	SV_CHECK_THINKFIRST(var);
 	if (SvREADONLY(var))
 		Perl_croak(aTHX_ PL_no_modify);
 	if (SvMAGICAL(var) && mg_find(var, PERL_MAGIC_uvar))
@@ -348,8 +349,7 @@ static void check_new_variable(pTHX_ SV* var) {
 		SvNIOK_off(var);
 	if (SvPOK(var)) 
 		SvPV_free(var);
-	if (SvTYPE(var) < SVt_PVMG)
-		sv_upgrade(var, SVt_PVMG);
+	SvUPGRADE(var, SVt_PVMG);
 }
 
 #define BITS32_MASK 0xFFFFFFFF
