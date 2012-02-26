@@ -16,7 +16,6 @@
 #ifdef __CYGWIN__
 #	undef WIN32
 #	undef _WIN32
-#	define madvise(address, length, advice) 0
 #endif
 
 #include <assert.h>
@@ -156,6 +155,10 @@ static size_t page_size() {
 	}
 	return pagesize;
 }
+#endif
+
+#ifdef VMS
+#define madvise(address, length, advice) 0
 #endif
 
 #ifndef MADV_NORMAL
@@ -493,6 +496,12 @@ static boot(pTHX) {
 #endif
 #ifdef MADV_DOFORK
 	ADVISE_CONSTANT("dofork", MADV_DOFORK);
+#endif
+#ifdef MADV_MERGEABLE
+	ADVISE_CONSTANT("mergeable", MADV_MERGEABLE);
+#endif
+#ifdef MADV_UNMERGEABLE
+	ADVISE_CONSTANT("unmergeable", MADV_UNMERGEABLE);
 #endif
 	/* BSD, Mac OS X & Solaris specific advice */
 #ifdef MADV_FREE
