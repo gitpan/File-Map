@@ -1,5 +1,9 @@
 Revision history for File-Map
 
+0.47      2012-04-04 23:17:55 Europe/Amsterdam
+          Restore fileno in sys_map; this fixes #76253: non-anonymous sys_map was useable since e102d034
+          Switch to using PodWeaver
+
 0.46      2012-02-26 17:59:33 Europe/Amsterdam
           Fix madvise on cygwin
           Disable advise on VMS

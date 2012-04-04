@@ -32,7 +32,7 @@ my %module_build_args = (
     "Leon Timmermans <fawaka\@gmail.com>"
   ],
   "dist_name" => "File-Map",
-  "dist_version" => "0.46",
+  "dist_version" => "0.47",
   "license" => "perl",
   "module_name" => "File::Map",
   "recommends" => {},

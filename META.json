@@ -4,7 +4,7 @@
       "Leon Timmermans <fawaka@gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300006, CPAN::Meta::Converter version 2.113640",
+   "generated_by" : "Dist::Zilla version 4.300006, CPAN::Meta::Converter version 2.120920",
    "keywords" : [
       "mmap",
       "memory",
@@ -31,34 +31,34 @@
       },
       "runtime" : {
          "requires" : {
-            "Carp" : 0,
-            "Const::Fast" : 0,
-            "PerlIO::Layers" : 0,
-            "Sub::Exporter" : 0,
-            "XSLoader" : 0,
+            "Carp" : "0",
+            "Const::Fast" : "0",
+            "PerlIO::Layers" : "0",
+            "Sub::Exporter" : "0",
+            "XSLoader" : "0",
             "perl" : "5.008",
-            "strict" : 0,
-            "subs" : 0,
-            "warnings" : 0
+            "strict" : "0",
+            "subs" : "0",
+            "warnings" : "0"
          }
       },
       "test" : {
          "requires" : {
-            "Config" : 0,
-            "File::Find" : 0,
-            "File::Temp" : 0,
-            "IO::Handle" : 0,
-            "IO::Socket::INET" : 0,
-            "Scalar::Util" : 0,
-            "Test::Exception" : 0,
-            "Test::More" : 0,
-            "Test::NoWarnings" : 0,
-            "Test::Warn" : 0,
-            "Time::HiRes" : 0,
-            "if" : 0,
-            "open" : 0,
-            "threads" : 0,
-            "utf8" : 0
+            "Config" : "0",
+            "File::Find" : "0",
+            "File::Temp" : "0",
+            "IO::Handle" : "0",
+            "IO::Socket::INET" : "0",
+            "Scalar::Util" : "0",
+            "Test::Exception" : "0",
+            "Test::More" : "0",
+            "Test::NoWarnings" : "0",
+            "Test::Warn" : "0",
+            "Time::HiRes" : "0",
+            "if" : "0",
+            "open" : "0",
+            "threads" : "0",
+            "utf8" : "0"
          }
       }
    },
@@ -74,6 +74,6 @@
          "web" : "http://github.com/Leont/file-map"
       }
    },
-   "version" : "0.46"
+   "version" : "0.47"
 }
 

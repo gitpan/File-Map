@@ -1,6 +1,6 @@
 package File::Map;
 {
-  $File::Map::VERSION = '0.46';
+  $File::Map::VERSION = '0.47';
 }
 
 # This software is copyright (c) 2008, 2009, 2010 by Leon Timmermans <leont@cpan.org>.
@@ -111,7 +111,7 @@ sub map_anonymous {
 sub sys_map {    ## no critic (ProhibitManyArgs)
 	my (undef, $length, $protection, $flags, $fh, $offset) = @_;
 	my $utf8 = _check_layers($fh);
-	my $fd = ($flags & MAP_ANONYMOUS) ? $ANON_FH : $fh;
+	my $fd = ($flags & MAP_ANONYMOUS) ? $ANON_FH : fileno $fh;
 	$offset ||= 0;
 	_mmap_impl($_[0], $length, $protection, $flags, $fd, $offset, $utf8);
 	return;
@@ -119,7 +119,11 @@ sub sys_map {    ## no critic (ProhibitManyArgs)
 
 1;
 
-__END__
+#ABSTRACT: Memory mapping made simple and safe.
+
+
+
+=pod
 
 =head1 NAME
 
@@ -127,7 +131,7 @@ File::Map - Memory mapping made simple and safe.
 
 =head1 VERSION
 
-Version 0.38
+version 0.47
 
 =head1 SYNOPSIS
 
@@ -451,39 +455,17 @@ Unicode file mappings are known to be buggy on perl 5.8.7 and lower.
 
 =head1 AUTHOR
 
-Leon Timmermans, C<< <leont at cpan.org> >>
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc File::Map
-
-You can also look for information at:
-
-=over 4
-
-=item * RT: CPAN's request tracker
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=File-Map>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/File-Map>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/File-Map>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/File-Map>
-
-=back
+Leon Timmermans <fawaka@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2008, 2009, 2010 Leon Timmermans, all rights reserved.
+This software is copyright (c) 2008 by Leon Timmermans.
 
-This program is free software; you can redistribute it and/or modify it
-under the same terms as perl itself.
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
+
+
+__END__
+
