@@ -1,5 +1,9 @@
 Revision history for File-Map
 
+0.48      2012-04-23 02:27:01 Europe/Amsterdam
+          Fix madvice on old cygwin versions
+          Made strerror_r/strerror_s usage more robust
+
 0.47      2012-04-04 23:17:55 Europe/Amsterdam
           Restore fileno in sys_map; this fixes #76253: non-anonymous sys_map was useable since e102d034
           Switch to using PodWeaver
