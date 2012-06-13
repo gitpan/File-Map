@@ -21,7 +21,6 @@ my %module_build_args = (
     "Time::HiRes" => 0,
     "if" => 0,
     "open" => 0,
-    "threads" => 0,
     "utf8" => 0
   },
   "configure_requires" => {
@@ -32,7 +31,7 @@ my %module_build_args = (
     "Leon Timmermans <fawaka\@gmail.com>"
   ],
   "dist_name" => "File-Map",
-  "dist_version" => "0.50",
+  "dist_version" => "0.51",
   "license" => "perl",
   "module_name" => "File::Map",
   "recommends" => {},
