@@ -20,7 +20,6 @@ t/20-remap.t
 t/20-tainting.t
 t/20-threads.t
 t/20-unicode.t
-t/release-kwalitee.t
 t/release-pod-coverage.t
 t/release-pod-syntax.t
 typemap

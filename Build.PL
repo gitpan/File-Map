@@ -31,7 +31,7 @@ my %module_build_args = (
     "Leon Timmermans <fawaka\@gmail.com>"
   ],
   "dist_name" => "File-Map",
-  "dist_version" => "0.52",
+  "dist_version" => "0.53",
   "license" => "perl",
   "module_name" => "File::Map",
   "recommends" => {},
@@ -40,7 +40,7 @@ my %module_build_args = (
     "Carp" => 0,
     "Const::Fast" => 0,
     "PerlIO::Layers" => 0,
-    "Sub::Exporter" => 0,
+    "Sub::Exporter::Progressive" => 0,
     "XSLoader" => 0,
     "perl" => "5.008",
     "strict" => 0,

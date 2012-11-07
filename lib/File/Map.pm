@@ -1,6 +1,6 @@
 package File::Map;
 {
-  $File::Map::VERSION = '0.52';
+  $File::Map::VERSION = '0.53';
 }
 
 # This software is copyright (c) 2008, 2009, 2010 by Leon Timmermans <leont@cpan.org>.
@@ -13,7 +13,7 @@ use strict;
 use warnings FATAL => 'all';
 use subs qw{PROT_READ PROT_WRITE MAP_PRIVATE MAP_SHARED MAP_FILE MAP_ANONYMOUS};
 
-use Sub::Exporter;
+use Sub::Exporter::Progressive ();
 use XSLoader ();
 use Carp qw/croak carp/;
 use Const::Fast;
@@ -38,15 +38,8 @@ my %export_data = (
 		}
 	}
 
-	Sub::Exporter::setup_exporter({ exports => \@export_ok, groups => \%export_tags });
+	Sub::Exporter::Progressive->import(-setup => { exports => \@export_ok, groups => \%export_tags });
 }
-
-const our %PROTECTION_FOR => (
-	'<'  => PROT_READ,
-	'+<' => PROT_READ | PROT_WRITE,
-	'>'  => PROT_WRITE,
-	'+>' => PROT_READ | PROT_WRITE,
-);
 
 const my $ANON_FH => -1;
 
@@ -78,7 +71,7 @@ sub map_handle {
 	my (undef, $fh, $mode, $offset, $length) = @_;
 	my $utf8 = _check_layers($fh);
 	($offset, $length) = _get_offset_length($offset, $length, $fh);
-	_mmap_impl($_[0], $length, $PROTECTION_FOR{ $mode || '<' }, MAP_SHARED | MAP_FILE, fileno $fh, $offset, $utf8);
+	_mmap_impl($_[0], $length, _protection_value($mode || '<'), MAP_SHARED | MAP_FILE, fileno $fh, $offset, $utf8);
 	return;
 }
 
@@ -90,7 +83,7 @@ sub map_file {
 	open my $fh, $minimode.$encoding, $filename or croak "Couldn't open file $filename: $!";
 	my $utf8 = _check_layers($fh);
 	($offset, $length) = _get_offset_length($offset, $length, $fh);
-	_mmap_impl($_[0], $length, $PROTECTION_FOR{$minimode}, MAP_SHARED | MAP_FILE, fileno $fh, $offset, $utf8);
+	_mmap_impl($_[0], $length, _protection_value($minimode), MAP_SHARED | MAP_FILE, fileno $fh, $offset, $utf8);
 	close $fh or croak "Couldn't close $filename after mapping: $!";
 	return;
 }
@@ -131,7 +124,7 @@ File::Map - Memory mapping made simple and safe.
 
 =head1 VERSION
 
-version 0.52
+version 0.53
 
 =head1 SYNOPSIS
 
