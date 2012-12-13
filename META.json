@@ -32,9 +32,8 @@
       "runtime" : {
          "requires" : {
             "Carp" : "0",
-            "Const::Fast" : "0",
             "PerlIO::Layers" : "0",
-            "Sub::Exporter::Progressive" : "0",
+            "Sub::Exporter::Progressive" : "0.001005",
             "XSLoader" : "0",
             "perl" : "5.008",
             "strict" : "0",
@@ -73,6 +72,6 @@
          "web" : "http://github.com/Leont/file-map"
       }
    },
-   "version" : "0.53"
+   "version" : "0.54"
 }
 

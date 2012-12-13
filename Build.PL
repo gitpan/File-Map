@@ -31,16 +31,15 @@ my %module_build_args = (
     "Leon Timmermans <fawaka\@gmail.com>"
   ],
   "dist_name" => "File-Map",
-  "dist_version" => "0.53",
+  "dist_version" => "0.54",
   "license" => "perl",
   "module_name" => "File::Map",
   "recommends" => {},
   "recursive_test_files" => 1,
   "requires" => {
     "Carp" => 0,
-    "Const::Fast" => 0,
     "PerlIO::Layers" => 0,
-    "Sub::Exporter::Progressive" => 0,
+    "Sub::Exporter::Progressive" => "0.001005",
     "XSLoader" => 0,
     "perl" => "5.008",
     "strict" => 0,

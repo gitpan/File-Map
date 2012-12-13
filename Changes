@@ -1,5 +1,9 @@
 Revision history for File-Map
 
+0.54      2012-12-13 23:47:47 Europe/Amsterdam
+          Deal better with copy-on-write
+          Remove Const::Fast dependency
+
 0.53      2012-11-07 11:45:09 Europe/Amsterdam
           Switch to Sub::Exporter::Progressive
           Moved protection flags into XS

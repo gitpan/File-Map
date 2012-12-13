@@ -33,9 +33,8 @@ meta-spec:
 name: File-Map
 requires:
   Carp: 0
-  Const::Fast: 0
   PerlIO::Layers: 0
-  Sub::Exporter::Progressive: 0
+  Sub::Exporter::Progressive: 0.001005
   XSLoader: 0
   perl: 5.008
   strict: 0
@@ -44,4 +43,4 @@ requires:
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=File-Map
   repository: git://github.com/Leont/file-map.git
-version: 0.53
+version: 0.54
