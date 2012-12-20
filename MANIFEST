@@ -10,7 +10,7 @@ dist.ini
 examples/fastsearch.pl
 lib/File/Map.pm
 lib/File/Map.xs
-ppport.h
+lib/File/ppport.h
 t/00-compile.t
 t/10-basics.t
 t/10-empty.t
