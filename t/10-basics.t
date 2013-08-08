@@ -6,9 +6,8 @@ use File::Map qw/:map lock_map advise/;
 use IO::Handle;
 use Scalar::Util qw/tainted/;
 use Test::More tests => 22;
-use Test::Warn;
-use Test::Exception;
-use Test::NoWarnings;
+use Test::Warnings;
+use Test::Fatal qw/lives_ok/;
 
 open my $self, '<:raw', $0 or die "Couldn't open self: $!";
 my $slurped = do { local $/; <$self> };

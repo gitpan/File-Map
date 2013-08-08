@@ -6,9 +6,8 @@ use warnings;
 use File::Map qw/:map lock_map sync advise/;
 use IO::Socket::INET;
 use Test::More tests => 27;
-use Test::Warn;
-use Test::Exception;
-use Test::NoWarnings;
+use Test::Warnings qw/warning warnings/;
+use Test::Fatal qw/exception lives_ok dies_ok/;
 use if $^O ne 'MSWin32', POSIX => qw/setlocale LC_ALL/;
 
 setlocale(&LC_ALL, 'C') if $^O ne 'MSWin32';
@@ -23,62 +22,64 @@ substr $mmaped, 0, length $mmaped, $slurped;
 
 is $mmaped, $slurped, '$slurped an $mmaped are equal';
 
-warning_like { $mmaped = reverse $mmaped } qr/^Writing directly to a memory mapped file is not recommended at /, 'Reversing should give a warning';
+like(warning { $mmaped = reverse $mmaped }, qr/^Writing directly to a memory mapped file is not recommended at /, 'Reversing should give a warning');
 
 is($mmaped, scalar reverse($slurped), '$mmap is reversed');
 
 {
 	no warnings 'substr';
-	warning_like { $mmaped = reverse $mmaped } undef, 'Reversing shouldn\'t give a warning when substr warnings are disabled';
+	is(warnings { $mmaped = reverse $mmaped }, 0, 'Reversing shouldn\'t give a warning when substr warnings are disabled');
 }
 
-warning_is { $mmaped = $mmaped } undef, 'No warnings on self-assignment';
+is(warnings { $mmaped = $mmaped }, 0, 'No warnings on self-assignment');
 
 dies_ok { map_file my $var, 'some-nonexistant-file' } 'Can\'t map non-existant files as readonly';
 
-warnings_like { $mmaped =~ s/(.)/$1$1/ } [ qr/^Writing directly to a memory mapped file is not recommended at /, qr/^Truncating new value to size of the memory map at /], 'Trying to make it longer gives warnings';
+my @warnings = warnings { $mmaped =~ s/(.)/$1$1/ };
+s/ at .*$//s for @warnings;
+is_deeply(\@warnings, [ 'Writing directly to a memory mapped file is not recommended', 'Truncating new value to size of the memory map'], 'Trying to make it longer gives warnings');
 
-warning_is { $slurped =~ tr/r/t/ } undef, 'Translation shouldn\'t cause warnings';
+is(warnings { $slurped =~ tr/r/t/ }, 0, 'Translation shouldn\'t cause warnings');
 
-throws_ok { sync my $foo } qr/^Could not sync: this variable is not memory mapped at /, 'Can\'t sync normal variables';
+like(exception { sync my $foo }, qr/^Could not sync: this variable is not memory mapped at /, 'Can\'t sync normal variables');
 
-throws_ok { unmap my $foo } qr/^Could not unmap: this variable is not memory mapped at /, 'Can\'t unmap normal variables';
+like(exception { unmap my $foo }, qr/^Could not unmap: this variable is not memory mapped at /, 'Can\'t unmap normal variables');
 
-throws_ok { lock_map my $foo } qr/^Could not lock_map: this variable is not memory mapped at /, 'Can\'t lock normal variables';
+like(exception { lock_map my $foo }, qr/^Could not lock_map: this variable is not memory mapped at /, 'Can\'t lock normal variables');
 
-throws_ok { map_anonymous my $foo, 0 } qr/^Zero length specified for anonymous map at /, 'Have to provide a length for anonymous maps';
+like(exception { map_anonymous my $foo, 0 }, qr/^Zero length specified for anonymous map at /, 'Have to provide a length for anonymous maps');
 
-throws_ok { &map_anonymous('foo', 1000) } qr/^Modification of a read-only value attempted at /, 'Can\'t use literal as variable';
+like(exception { &map_anonymous('foo', 1000) }, qr/^Modification of a read-only value attempted at /, 'Can\'t use literal as variable');
 
 SKIP: {
 	my $bound = IO::Socket::INET->new(Listen => 1, ReuseAddr => 1, LocalAddr => 'localhost') or skip "Couldn't make listening socket: $!", 1;
-	throws_ok { map_handle my $foo, $bound } qr/^Could not map:/, 'Can\'t map STDOUT';
+	like(exception { map_handle my $foo, $bound }, qr/^Could not map:/, 'Can\'t map STDOUT');
 }
 
-warning_is { advise $mmaped, 'sequential' } undef, 'advice $mmaped, \'readahead\'';
-warning_like { advise $mmaped, 'non-existent' } qr/^Unknown advice 'non-existent' at /, 'advice $mmaped, \'non-existent\'';
+is(warnings { advise $mmaped, 'sequential' }, 0, 'advice $mmaped, \'readahead\'');
+like(warning { advise $mmaped, 'non-existent' }, qr/^Unknown advice 'non-existent' at /, 'advice $mmaped, \'non-existent\'');
 
-warning_like { $mmaped = "foo" } qr/^Writing directly to a memory mapped file is not recommended at /, 'Trying to make it shorter gives a warning';
+like(warning { $mmaped = "foo" }, qr/^Writing directly to a memory mapped file is not recommended at /, 'Trying to make it shorter gives a warning');
 
 is(length $mmaped, length $slurped, '$mmaped and $slurped still have the same length');
 
-warning_like { $mmaped = 1 } qr/^Writing directly to a memory mapped file is not recommended at /, 'Cutting should give a warning for numbers too';
+like(warning { $mmaped = 1 }, qr/^Writing directly to a memory mapped file is not recommended at /, 'Cutting should give a warning for numbers too');
 
-throws_ok { map_file my $str, $0, '<', -1, 100; $str =~ tr/a// } qr/^Window \(-?\d+,-?\d+\) is outside the file /, 'negative offsets give an error';
+like(exception { map_file my $str, $0, '<', -1, 100; $str =~ tr/a// }, qr/^Window \(-?\d+,-?\d+\) is outside the file /, 'negative offsets give an error');
 
-warnings_like { undef $mmaped } [ qr/^Writing directly to a memory mapped file is not recommended at/ ], 'Survives undefing';
+like(warning { undef $mmaped }, qr/^Writing directly to a memory mapped file is not recommended at/, 'Survives undefing');
 
 map_anonymous our $local, 1024;
 
 SKIP: {
 	skip 'Your perl doesn\'t support hooking localization', 1 if $] < 5.008009;
-	throws_ok { local $local } qr/^Can't localize file map at /, 'Localization throws an exception';
+	like(exception { local $local }, qr/^Can't localize file map at /, 'Localization throws an exception');
 }
 
 {
 	my $mystring = 'hello';
 	open my $fh, '<', \$mystring;
-	throws_ok { map_handle my ($map), $fh; } qr/Can't map fake filehandle/, 'Mapping a scalar string handle throws an error';
+	like(exception { map_handle my ($map), $fh; }, qr/Can't map fake filehandle/, 'Mapping a scalar string handle throws an error');
 }
 
 my %hash;

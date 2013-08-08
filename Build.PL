@@ -17,7 +17,7 @@ my %module_build_args = (
     "Leon Timmermans <fawaka\@gmail.com>"
   ],
   "dist_name" => "File-Map",
-  "dist_version" => "0.57",
+  "dist_version" => "0.58",
   "license" => "perl",
   "module_name" => "File::Map",
   "recommends" => {
@@ -36,16 +36,14 @@ my %module_build_args = (
   },
   "script_files" => [],
   "test_requires" => {
-    "Config" => 0,
     "File::Find" => 0,
     "File::Temp" => 0,
     "IO::Handle" => 0,
     "IO::Socket::INET" => 0,
     "Scalar::Util" => 0,
-    "Test::Exception" => 0,
+    "Test::Fatal" => 0,
     "Test::More" => 0,
-    "Test::NoWarnings" => 0,
-    "Test::Warn" => 0,
+    "Test::Warnings" => 0,
     "Time::HiRes" => 0,
     "if" => 0,
     "open" => 0,
