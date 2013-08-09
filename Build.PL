@@ -17,7 +17,7 @@ my %module_build_args = (
     "Leon Timmermans <fawaka\@gmail.com>"
   ],
   "dist_name" => "File-Map",
-  "dist_version" => "0.58",
+  "dist_version" => "0.59",
   "license" => "perl",
   "module_name" => "File::Map",
   "recommends" => {
@@ -43,7 +43,7 @@ my %module_build_args = (
     "Scalar::Util" => 0,
     "Test::Fatal" => 0,
     "Test::More" => 0,
-    "Test::Warnings" => 0,
+    "Test::Warnings" => "0.004",
     "Time::HiRes" => 0,
     "if" => 0,
     "open" => 0,
