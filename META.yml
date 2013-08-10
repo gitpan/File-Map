@@ -11,7 +11,7 @@ build_requires:
   Scalar::Util: 0
   Test::Fatal: 0
   Test::More: 0
-  Test::Warnings: 0.004
+  Test::Warnings: 0.005
   Time::HiRes: 0
   if: 0
   open: 0
@@ -43,4 +43,4 @@ requires:
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=File-Map
   repository: git://github.com/Leont/file-map.git
-version: 0.59
+version: 0.60

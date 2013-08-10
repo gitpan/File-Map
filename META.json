@@ -63,7 +63,7 @@
             "Scalar::Util" : "0",
             "Test::Fatal" : "0",
             "Test::More" : "0",
-            "Test::Warnings" : "0.004",
+            "Test::Warnings" : "0.005",
             "Time::HiRes" : "0",
             "if" : "0",
             "open" : "0",
@@ -83,6 +83,6 @@
          "web" : "https://github.com/Leont/file-map"
       }
    },
-   "version" : "0.59"
+   "version" : "0.60"
 }
 
