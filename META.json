@@ -4,7 +4,7 @@
       "Leon Timmermans <fawaka@gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300035, CPAN::Meta::Converter version 2.120921",
+   "generated_by" : "Dist::Zilla version 4.300038, CPAN::Meta::Converter version 2.120921",
    "keywords" : [
       "mmap",
       "memory",
@@ -56,10 +56,10 @@
       },
       "test" : {
          "requires" : {
-            "File::Find" : "0",
-            "File::Temp" : "0",
+            "File::Spec" : "0",
             "IO::Handle" : "0",
             "IO::Socket::INET" : "0",
+            "IPC::Open3" : "0",
             "Scalar::Util" : "0",
             "Test::Fatal" : "0",
             "Test::More" : "0",
@@ -69,6 +69,12 @@
             "open" : "0",
             "utf8" : "0"
          }
+      }
+   },
+   "provides" : {
+      "File::Map" : {
+         "file" : "lib/File/Map.pm",
+         "version" : "0.61"
       }
    },
    "release_status" : "stable",
@@ -83,6 +89,6 @@
          "web" : "https://github.com/Leont/file-map"
       }
    },
-   "version" : "0.60"
+   "version" : "0.61"
 }
 
