@@ -18,7 +18,7 @@ my %module_build_args = (
     "Leon Timmermans <fawaka\@gmail.com>"
   ],
   "dist_name" => "File-Map",
-  "dist_version" => "0.62",
+  "dist_version" => "0.63",
   "license" => "perl",
   "module_name" => "File::Map",
   "recommends" => {

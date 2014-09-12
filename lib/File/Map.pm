@@ -1,5 +1,5 @@
 package File::Map;
-$File::Map::VERSION = '0.62';
+$File::Map::VERSION = '0.63';
 # This software is copyright (c) 2008, 2009, 2010, 2011, 2012 by Leon Timmermans <leont@cpan.org>.
 #
 # This is free software; you can redistribute it and/or modify it under
@@ -120,7 +120,7 @@ File::Map - Memory mapping made simple and safe.
 
 =head1 VERSION
 
-version 0.62
+version 0.63
 
 =head1 SYNOPSIS
 
